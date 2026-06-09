@@ -1,0 +1,27 @@
+<svg width="1200" height="630" viewBox="0 0 1200 630" xmlns="http://www.w3.org/2000/svg">
+  <rect width="1200" height="630" fill="#F7F6F2"/>
+  <rect x="0" y="0" width="1200" height="630" fill="#F7F6F2"/>
+
+  <!-- Background accent -->
+  <rect x="800" y="-80" width="600" height="600" rx="300" fill="#FDF0E8" opacity="0.5"/>
+
+  <!-- Logo -->
+  <text x="80" y="120" font-family="system-ui, -apple-system, sans-serif" font-size="52" font-weight="500" letter-spacing="6" fill="#1a1a1a">AZ</text>
+  <text x="176" y="120" font-family="system-ui, -apple-system, sans-serif" font-size="52" font-weight="500" letter-spacing="6" fill="#C85A1E">DEVS</text>
+
+  <!-- Main headline -->
+  <text x="80" y="280" font-family="system-ui, -apple-system, sans-serif" font-size="58" font-weight="500" letter-spacing="-2" fill="#1a1a1a">Web, App &amp; AI Development</text>
+  <text x="80" y="360" font-family="system-ui, -apple-system, sans-serif" font-size="58" font-weight="500" letter-spacing="-2" fill="#C85A1E">for Toronto Small Businesses</text>
+
+  <!-- Subtitle -->
+  <text x="80" y="440" font-family="system-ui, -apple-system, sans-serif" font-size="26" fill="#666666">Fixed pricing · Fast turnaround · Full ownership</text>
+
+  <!-- Location pill -->
+  <rect x="80" y="490" width="220" height="42" rx="21" fill="#1a1a1a"/>
+  <text x="150" y="517" font-family="system-ui, -apple-system, sans-serif" font-size="18" font-weight="500" fill="#F7F6F2" text-anchor="middle">Toronto, ON</text>
+  <circle cx="102" cy="511" r="6" fill="#EF9F27"/>
+
+  <!-- Bottom bar -->
+  <rect x="0" y="600" width="1200" height="30" fill="#1a1a1a"/>
+  <text x="80" y="621" font-family="system-ui, -apple-system, sans-serif" font-size="14" fill="#555" letter-spacing="1">azdevs.ca</text>
+</svg>

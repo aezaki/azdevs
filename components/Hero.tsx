@@ -10,20 +10,25 @@
  * @notes factRows is defined at module scope (outside the component) because it
  *        is a static data array — hoisting it avoids re-creation on every render.
  *        scrollToServices is memoised with useCallback for the same reason.
- *        fadeIn() is used here (not scrollReveal) because these elements must
- *        animate on page load, not on scroll entry.
+ *
+ *        The headline uses a per-line mask reveal: each line sits inside an
+ *        overflow:hidden wrapper and slides up from y:40. The location pill
+ *        animates the dot (scale spring) before the text (opacity fade) to give
+ *        the entrance a feeling of sequence.
+ *
+ *        useReducedMotion: when the OS accessibility setting is on, all spatial
+ *        animations are replaced with simple opacity fades.
  */
 
 'use client';
 
 import { useCallback } from 'react';
-import { motion } from 'framer-motion';
+import { motion, useReducedMotion } from 'framer-motion';
 import { CALENDLY_URL, LOCATION } from '@/lib/constants';
-import { fadeIn, ease } from '@/lib/animations';
+import { ease } from '@/lib/animations';
 
 // ─── Static Data ───────────────────────────────────────────────────────────────
 
-// Trust-signal rows shown in the desktop fact card (hidden on mobile)
 const factRows = [
   { label: 'Avg. project turnaround', tag: '2 to 4 weeks' },
   { label: 'Discovery call', tag: 'Free, no pitch' },
@@ -34,7 +39,8 @@ const factRows = [
 // ─── Component ─────────────────────────────────────────────────────────────────
 
 export default function Hero() {
-  // Memoised so the function reference is stable across renders
+  const prefersReducedMotion = useReducedMotion();
+
   const scrollToServices = useCallback(() => {
     const el = document.querySelector('#services');
     if (el) el.scrollIntoView({ behavior: 'smooth' });
@@ -46,56 +52,99 @@ export default function Hero() {
       style={{ backgroundColor: '#F7F6F2' }}
     >
       <div className="mx-auto max-w-[1200px] px-5 md:px-12">
-        {/* Two-column on lg+, single column on mobile */}
         <div className="grid grid-cols-1 lg:grid-cols-[1.15fr_0.85fr] gap-8 items-center">
 
           {/* ── Left column: copy + CTAs ── */}
           <div className="flex flex-col gap-6">
 
-            {/* Location pill */}
+            {/* Location pill — dot springs in first, text fades 100ms later */}
             <motion.div
-              {...fadeIn(0)}
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              transition={{ duration: 0.4, delay: 0 }}
               className="flex items-center gap-2"
               style={{ fontSize: '12px', color: '#888' }}
             >
-              {/* Amber dot signals "active / open for work" */}
-              <span
+              <motion.span
+                initial={{ scale: prefersReducedMotion ? 1 : 0 }}
+                animate={{ scale: 1 }}
+                transition={{ type: 'spring', stiffness: 300, damping: 20, delay: 0 }}
                 className="w-2 h-2 rounded-full flex-shrink-0"
-                style={{ backgroundColor: '#EF9F27' }}
+                style={{ backgroundColor: '#EF9F27', display: 'inline-block' }}
                 aria-hidden="true"
               />
-              {LOCATION}
+              <motion.span
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                transition={{ duration: 0.3, delay: 0.1 }}
+              >
+                {LOCATION}
+              </motion.span>
             </motion.div>
 
-            {/* Page's single h1 — contains the primary keyword phrase */}
-            <motion.h1
-              {...fadeIn(0.1)}
+            {/* Headline — each line mask-reveals from below (overflow:hidden clips the travel) */}
+            <h1
               style={{
                 fontSize: 'clamp(34px, 4.5vw, 50px)',
                 fontWeight: 500,
-                letterSpacing: '-2px',
+                letterSpacing: '-2.5px',
                 lineHeight: 1.07,
                 color: '#1a1a1a',
               }}
             >
-              We build software that makes your{' '}
-              <em className="not-italic" style={{ color: '#C85A1E' }}>
-                business run better.
-              </em>
-            </motion.h1>
+              <div style={{ overflow: 'hidden' }}>
+                <motion.span
+                  style={{ display: 'block' }}
+                  initial={{ y: prefersReducedMotion ? 0 : 40, opacity: 0 }}
+                  animate={{ y: 0, opacity: 1 }}
+                  transition={{ duration: 0.6, ease, delay: 0.1 }}
+                >
+                  We build software that makes your
+                </motion.span>
+              </div>
+              <div style={{ overflow: 'hidden' }}>
+                <motion.span
+                  style={{ display: 'block' }}
+                  initial={{ y: prefersReducedMotion ? 0 : 40, opacity: 0 }}
+                  animate={{ y: 0, opacity: 1 }}
+                  transition={{ duration: 0.6, ease, delay: 0.18 }}
+                >
+                  {/* One-time brightness pulse fires after the line lands */}
+                  <motion.em
+                    className="not-italic"
+                    animate={
+                      prefersReducedMotion
+                        ? { color: '#C85A1E' }
+                        : { color: ['#C85A1E', '#e8813a', '#C85A1E'] }
+                    }
+                    transition={{ delay: 0.9, duration: 0.6, ease: 'easeInOut', times: [0, 0.5, 1] }}
+                    style={{ color: '#C85A1E' }}
+                  >
+                    business run better.
+                  </motion.em>
+                </motion.span>
+              </div>
+            </h1>
 
-            {/* Supporting subtitle */}
+            {/* Subtitle — enters after headline line 1 is mostly done */}
             <motion.p
-              {...fadeIn(0.2)}
-              style={{ fontSize: '16px', color: '#666666', lineHeight: 1.75, maxWidth: '480px' }}
+              initial={{ opacity: 0, y: prefersReducedMotion ? 0 : 16 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.6, ease, delay: 0.5 }}
+              style={{ fontSize: '16px', color: '#666666', lineHeight: 1.8, maxWidth: '480px' }}
             >
               Websites, apps, automations, and AI tools for small businesses and startups in the
               GTA. No fluff, no bloated agencies. Just good work at a fair price.
             </motion.p>
 
-            {/* Primary CTA (Calendly) + secondary CTA (scroll to services) */}
-            <motion.div {...fadeIn(0.3)} className="flex flex-wrap gap-3">
-              <a
+            {/* CTAs — staggered 0.15s after subtitle */}
+            <motion.div
+              initial={{ opacity: 0, y: prefersReducedMotion ? 0 : 16 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.6, ease, delay: 0.65 }}
+              className="flex flex-wrap gap-3"
+            >
+              <motion.a
                 href={CALENDLY_URL}
                 target="_blank"
                 rel="noopener noreferrer"
@@ -108,13 +157,14 @@ export default function Hero() {
                   fontSize: '14px',
                   minHeight: '44px',
                 }}
+                whileTap={{ scale: 0.97, transition: { duration: 0.1 } }}
                 onMouseEnter={(e) => (e.currentTarget.style.backgroundColor = '#C85A1E')}
                 onMouseLeave={(e) => (e.currentTarget.style.backgroundColor = '#1a1a1a')}
               >
                 Book a free call
-              </a>
+              </motion.a>
 
-              <button
+              <motion.button
                 onClick={scrollToServices}
                 className="inline-flex items-center font-medium transition-all duration-200 cursor-pointer bg-transparent"
                 style={{
@@ -125,19 +175,20 @@ export default function Hero() {
                   border: '0.5px solid #ccc',
                   minHeight: '44px',
                 }}
+                whileTap={{ scale: 0.97, transition: { duration: 0.1 } }}
                 onMouseEnter={(e) => (e.currentTarget.style.borderColor = '#1a1a1a')}
                 onMouseLeave={(e) => (e.currentTarget.style.borderColor = '#ccc')}
               >
                 See our services
-              </button>
+              </motion.button>
             </motion.div>
           </div>
 
-          {/* ── Right column: fact card (desktop only) ── */}
+          {/* ── Right column: fact card — slides in from x:20 ── */}
           <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.55, ease, delay: 0.25 }}
+            initial={{ opacity: 0, x: prefersReducedMotion ? 0 : 20 }}
+            animate={{ opacity: 1, x: 0 }}
+            transition={{ duration: 0.6, ease, delay: 0.3 }}
             className="hidden lg:block"
             style={{
               backgroundColor: '#FFFFFF',
@@ -148,8 +199,11 @@ export default function Hero() {
             aria-label="At a glance"
           >
             {factRows.map((row, i) => (
-              <div
+              <motion.div
                 key={row.label}
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                transition={{ duration: 0.4, delay: 0.35 + i * 0.06 }}
                 className="flex items-center justify-between px-6 py-4 transition-colors duration-150"
                 style={{
                   borderBottom: i < factRows.length - 1 ? '0.5px solid #dedad2' : 'none',
@@ -170,7 +224,7 @@ export default function Hero() {
                 >
                   {row.tag}
                 </span>
-              </div>
+              </motion.div>
             ))}
           </motion.div>
 

@@ -12,15 +12,26 @@
  *        double-submit and shows appropriate UI for each state. Server errors
  *        surface the error message returned by /api/contact; rate limit (429) gets
  *        a specific user-facing message without exposing the implementation detail.
+ *
+ *        Section columns enter from opposite sides (left: x:-16, right: x:16) and
+ *        meet in the middle after the section header has arrived.
+ *
+ *        FAQ `+` icon rotates 45deg to `×` via Framer Motion (not CSS transform)
+ *        using a snappy custom ease [0.04, 0.62, 0.23, 0.98].
+ *
+ *        InputField wraps in a motion.div so focus drives scale:1.005 + ring
+ *        box-shadow — the input activation feels physical.
+ *
+ *        useReducedMotion: spatial animations disabled.
  */
 
 'use client';
 
 import { useState } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
+import { motion, AnimatePresence, useReducedMotion } from 'framer-motion';
 import { IconMail, IconMapPin, IconPlus, IconX, IconCalendar } from '@tabler/icons-react';
 import { CALENDLY_URL, CONTACT_EMAIL, LOCATION, FAQ_ITEMS, SERVICE_OPTIONS } from '@/lib/constants';
-import { scrollReveal } from '@/lib/animations';
+import { scrollReveal, ease } from '@/lib/animations';
 
 // ─── Types ─────────────────────────────────────────────────────────────────────
 
@@ -37,6 +48,11 @@ interface FieldErrors {
   service?: string;
   message?: string;
 }
+
+// ─── Constants ─────────────────────────────────────────────────────────────────
+
+// Snappier on open, smoother on close
+const faqEase: [number, number, number, number] = [0.04, 0.62, 0.23, 0.98];
 
 // ─── Sub-components ────────────────────────────────────────────────────────────
 
@@ -60,17 +76,17 @@ function FaqItem({
         style={{ fontSize: '14px', fontWeight: 500, color: '#1a1a1a' }}
       >
         <span>{question}</span>
-        {/* Icon rotates 45° when open to form an ✕ shape */}
-        <div
-          className="flex-shrink-0 transition-transform duration-200"
-          style={{ transform: open ? 'rotate(45deg)' : 'rotate(0deg)' }}
+        {/* Framer Motion rotation — 45deg = + becomes ×, 0deg = + resting */}
+        <motion.div
+          animate={{ rotate: open ? 45 : 0 }}
+          transition={{ duration: 0.22, ease: faqEase }}
+          className="flex-shrink-0"
           aria-hidden="true"
         >
           <IconPlus size={16} style={{ color: '#888' }} />
-        </div>
+        </motion.div>
       </button>
 
-      {/* Animated height collapse — AnimatePresence handles mount/unmount */}
       <AnimatePresence initial={false}>
         {open && (
           <motion.div
@@ -78,13 +94,10 @@ function FaqItem({
             initial={{ height: 0, opacity: 0 }}
             animate={{ height: 'auto', opacity: 1 }}
             exit={{ height: 0, opacity: 0 }}
-            transition={{ duration: 0.25, ease: 'easeInOut' }}
+            transition={{ duration: 0.28, ease: faqEase }}
             style={{ overflow: 'hidden' }}
           >
-            <p
-              className="pb-4"
-              style={{ fontSize: '14px', color: '#666', lineHeight: 1.7 }}
-            >
+            <p className="pb-4" style={{ fontSize: '14px', color: '#666', lineHeight: 1.8 }}>
               {answer}
             </p>
           </motion.div>
@@ -111,7 +124,7 @@ function InputField({
   error?: string;
   placeholder?: string;
 }) {
-  // Local focus state drives the accent border colour without needing React context
+  const prefersReducedMotion = useReducedMotion();
   const [focused, setFocused] = useState(false);
 
   return (
@@ -119,28 +132,35 @@ function InputField({
       <label htmlFor={id} style={{ fontSize: '13px', fontWeight: 500, color: '#444' }}>
         {label}
       </label>
-      <input
-        id={id}
-        type={type}
-        value={value}
-        onChange={(e) => onChange(e.target.value)}
-        placeholder={placeholder}
-        onFocus={() => setFocused(true)}
-        onBlur={() => setFocused(false)}
-        style={{
-          backgroundColor: '#fff',
-          border: `0.5px solid ${error ? '#C85A1E' : focused ? '#C85A1E' : '#dedad2'}`,
-          borderRadius: '8px',
-          padding: '11px 14px',
-          fontSize: '14px',
-          color: '#1a1a1a',
-          outline: 'none',
-          width: '100%',
-          transition: 'border-color 0.2s',
-        }}
-        aria-invalid={!!error}
-        aria-describedby={error ? `${id}-error` : undefined}
-      />
+      {/* Wrapper scales slightly on focus — gives the input a sense of activation */}
+      <motion.div
+        animate={prefersReducedMotion ? {} : { scale: focused ? 1.005 : 1 }}
+        transition={{ duration: 0.15 }}
+      >
+        <input
+          id={id}
+          type={type}
+          value={value}
+          onChange={(e) => onChange(e.target.value)}
+          placeholder={placeholder}
+          onFocus={() => setFocused(true)}
+          onBlur={() => setFocused(false)}
+          style={{
+            backgroundColor: '#fff',
+            border: `0.5px solid ${error ? '#C85A1E' : focused ? '#C85A1E' : '#dedad2'}`,
+            borderRadius: '8px',
+            padding: '11px 14px',
+            fontSize: '14px',
+            color: '#1a1a1a',
+            outline: 'none',
+            width: '100%',
+            transition: 'border-color 0.2s, box-shadow 0.2s',
+            boxShadow: focused && !error ? '0 0 0 3px rgba(200,90,30,0.1)' : 'none',
+          }}
+          aria-invalid={!!error}
+          aria-describedby={error ? `${id}-error` : undefined}
+        />
+      </motion.div>
       {error && (
         <p id={`${id}-error`} role="alert" style={{ fontSize: '12px', color: '#C85A1E' }}>
           {error}
@@ -153,26 +173,21 @@ function InputField({
 // ─── Section ───────────────────────────────────────────────────────────────────
 
 export default function Contact() {
+  const prefersReducedMotion = useReducedMotion();
+
   // ─── State ──────────────────────────────────────────────────────────────────
 
-  // Index of the currently open FAQ item; null = all collapsed
   const [openFaq, setOpenFaq] = useState<number | null>(null);
-
   const [form, setForm] = useState<FormState>({ name: '', email: '', service: '', message: '' });
   const [errors, setErrors] = useState<FieldErrors>({});
-
-  // Submission state machine: idle → loading → success | error
   const [status, setStatus] = useState<'idle' | 'loading' | 'success' | 'error'>('idle');
   const [serverError, setServerError] = useState('');
-
-  // Separate focus trackers for select and textarea (not handled by InputField)
   const [selectFocused, setSelectFocused] = useState(false);
   const [textareaFocused, setTextareaFocused] = useState(false);
+  const [calHovered, setCalHovered] = useState(false);
 
   // ─── Validation ─────────────────────────────────────────────────────────────
 
-  // Client-side validation mirrors server-side rules in /api/contact/route.ts.
-  // Returns true only if all fields pass; populates `errors` otherwise.
   const validate = (): boolean => {
     const newErrors: FieldErrors = {};
     if (!form.name.trim()) newErrors.name = 'Name is required.';
@@ -203,7 +218,6 @@ export default function Contact() {
         body: JSON.stringify(form),
       });
 
-      // Special-case 429 to show a friendly rate-limit message
       if (res.status === 429) {
         setServerError("You've sent too many messages recently. Please try again in an hour.");
         setStatus('error');
@@ -211,7 +225,6 @@ export default function Contact() {
       }
 
       if (!res.ok) {
-        // Surface the server's first validation error if available
         const data = await res.json().catch(() => ({}));
         setServerError(data.error || 'Something went wrong. Please try again.');
         setStatus('error');
@@ -235,7 +248,7 @@ export default function Contact() {
     >
       <div className="mx-auto max-w-[1200px]">
 
-        {/* Section header */}
+        {/* Section header — enters first */}
         <motion.div
           {...scrollReveal()}
           className="mb-12"
@@ -243,7 +256,7 @@ export default function Contact() {
         >
           <p
             className="uppercase mb-3"
-            style={{ fontSize: '11px', letterSpacing: '2px', color: '#aaaaaa' }}
+            style={{ fontSize: '11px', letterSpacing: '2.5px', color: '#aaaaaa' }}
           >
             Get in touch
           </p>
@@ -251,7 +264,7 @@ export default function Contact() {
             style={{
               fontSize: 'clamp(28px, 3vw, 38px)',
               fontWeight: 500,
-              letterSpacing: '-1px',
+              letterSpacing: '-1.2px',
               lineHeight: 1.2,
               color: '#1a1a1a',
               marginBottom: '12px',
@@ -259,21 +272,23 @@ export default function Contact() {
           >
             Let&apos;s figure out if we&apos;re a good fit.
           </h2>
-          <p style={{ fontSize: '16px', color: '#666', lineHeight: 1.75 }}>
+          <p style={{ fontSize: '16px', color: '#666', lineHeight: 1.8 }}>
             Drop us a message or book a call directly. Either way, you&apos;ll hear back within one
             business day.
           </p>
         </motion.div>
 
-        {/* Two-column layout: contact info + FAQ / form */}
+        {/* Two columns enter from opposite sides and meet in the middle */}
         <div className="grid grid-cols-1 md:grid-cols-[1fr_1.2fr] gap-10 md:gap-16 items-start">
 
-          {/* ── Left: contact details, Calendly CTA, FAQ accordion ── */}
+          {/* ── Left: slides in from x:-16 ── */}
           <motion.div
-            {...scrollReveal(0.1)}
+            initial={{ opacity: 0, x: prefersReducedMotion ? 0 : -16 }}
+            whileInView={{ opacity: 1, x: 0 }}
+            viewport={{ once: true, amount: 0.1 }}
+            transition={{ duration: 0.6, ease, delay: 0.15 }}
             className="flex flex-col gap-5"
           >
-            {/* Contact detail rows */}
             <a
               href={`mailto:${CONTACT_EMAIL}`}
               className="inline-flex items-center gap-2 transition-colors duration-200"
@@ -290,8 +305,8 @@ export default function Contact() {
               {LOCATION}
             </p>
 
-            {/* Calendly booking CTA */}
-            <a
+            {/* Calendly CTA — calendar icon tilts -12deg on hover */}
+            <motion.a
               href={CALENDLY_URL}
               target="_blank"
               rel="noopener noreferrer"
@@ -303,18 +318,28 @@ export default function Contact() {
                 borderRadius: '8px',
                 fontSize: '14px',
               }}
+              whileTap={{ scale: 0.97, transition: { duration: 0.1 } }}
+              onHoverStart={() => setCalHovered(true)}
+              onHoverEnd={() => setCalHovered(false)}
               onMouseEnter={(e) => (e.currentTarget.style.backgroundColor = '#C85A1E')}
               onMouseLeave={(e) => (e.currentTarget.style.backgroundColor = '#1a1a1a')}
             >
-              <IconCalendar size={16} aria-hidden="true" />
+              <motion.span
+                animate={prefersReducedMotion ? {} : { rotate: calHovered ? -12 : 0 }}
+                transition={{ duration: 0.2 }}
+                style={{ display: 'inline-flex' }}
+                aria-hidden="true"
+              >
+                <IconCalendar size={16} />
+              </motion.span>
               Book a call on Calendly
-            </a>
+            </motion.a>
 
             {/* FAQ accordion */}
             <div style={{ borderTop: '0.5px solid #dedad2', paddingTop: '20px', marginTop: '4px' }}>
               <p
                 className="uppercase mb-4"
-                style={{ fontSize: '11px', letterSpacing: '2px', color: '#aaaaaa' }}
+                style={{ fontSize: '11px', letterSpacing: '2.5px', color: '#aaaaaa' }}
               >
                 Before you reach out
               </p>
@@ -332,10 +357,14 @@ export default function Contact() {
             </div>
           </motion.div>
 
-          {/* ── Right: form or success state ── */}
-          <motion.div {...scrollReveal(0.15)}>
+          {/* ── Right: slides in from x:16 ── */}
+          <motion.div
+            initial={{ opacity: 0, x: prefersReducedMotion ? 0 : 16 }}
+            whileInView={{ opacity: 1, x: 0 }}
+            viewport={{ once: true, amount: 0.1 }}
+            transition={{ duration: 0.6, ease, delay: 0.3 }}
+          >
             {status === 'success' ? (
-              // Success confirmation card
               <div
                 className="flex flex-col gap-4 items-start"
                 style={{
@@ -362,12 +391,11 @@ export default function Contact() {
                 <h3 style={{ fontSize: '20px', fontWeight: 500, color: '#1a1a1a' }}>
                   Message sent.
                 </h3>
-                <p style={{ fontSize: '15px', color: '#666', lineHeight: 1.7 }}>
+                <p style={{ fontSize: '15px', color: '#666', lineHeight: 1.8 }}>
                   Thanks for reaching out. We&apos;ll get back to you within one business day.
                 </p>
               </div>
             ) : (
-              // Contact form
               <form
                 onSubmit={handleSubmit}
                 noValidate
@@ -381,7 +409,6 @@ export default function Contact() {
                   gap: '20px',
                 }}
               >
-                {/* Name + Email side-by-side on sm+ */}
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   <InputField
                     label="Name"
@@ -410,39 +437,44 @@ export default function Contact() {
                   >
                     Service
                   </label>
-                  <select
-                    id="service"
-                    value={form.service}
-                    onChange={(e) => setForm((f) => ({ ...f, service: e.target.value }))}
-                    onFocus={() => setSelectFocused(true)}
-                    onBlur={() => setSelectFocused(false)}
-                    style={{
-                      backgroundColor: '#fff',
-                      border: `0.5px solid ${errors.service ? '#C85A1E' : selectFocused ? '#C85A1E' : '#dedad2'}`,
-                      borderRadius: '8px',
-                      padding: '11px 14px',
-                      fontSize: '14px',
-                      color: form.service ? '#1a1a1a' : '#aaaaaa',
-                      outline: 'none',
-                      width: '100%',
-                      transition: 'border-color 0.2s',
-                      appearance: 'none',
-                      // Custom chevron SVG replaces the browser default arrow
-                      backgroundImage: `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%23888' stroke-width='2'%3E%3Cpolyline points='6 9 12 15 18 9'/%3E%3C/svg%3E")`,
-                      backgroundRepeat: 'no-repeat',
-                      backgroundPosition: 'right 14px center',
-                    }}
-                    aria-invalid={!!errors.service}
+                  <motion.div
+                    animate={{ scale: selectFocused ? 1.005 : 1 }}
+                    transition={{ duration: 0.15 }}
                   >
-                    <option value="" disabled>
-                      Select a service
-                    </option>
-                    {SERVICE_OPTIONS.map((opt) => (
-                      <option key={opt} value={opt}>
-                        {opt}
+                    <select
+                      id="service"
+                      value={form.service}
+                      onChange={(e) => setForm((f) => ({ ...f, service: e.target.value }))}
+                      onFocus={() => setSelectFocused(true)}
+                      onBlur={() => setSelectFocused(false)}
+                      style={{
+                        backgroundColor: '#fff',
+                        border: `0.5px solid ${errors.service ? '#C85A1E' : selectFocused ? '#C85A1E' : '#dedad2'}`,
+                        borderRadius: '8px',
+                        padding: '11px 14px',
+                        fontSize: '14px',
+                        color: form.service ? '#1a1a1a' : '#aaaaaa',
+                        outline: 'none',
+                        width: '100%',
+                        transition: 'border-color 0.2s, box-shadow 0.2s',
+                        appearance: 'none',
+                        backgroundImage: `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%23888' stroke-width='2'%3E%3Cpolyline points='6 9 12 15 18 9'/%3E%3C/svg%3E")`,
+                        backgroundRepeat: 'no-repeat',
+                        backgroundPosition: 'right 14px center',
+                        boxShadow: selectFocused && !errors.service ? '0 0 0 3px rgba(200,90,30,0.1)' : 'none',
+                      }}
+                      aria-invalid={!!errors.service}
+                    >
+                      <option value="" disabled>
+                        Select a service
                       </option>
-                    ))}
-                  </select>
+                      {SERVICE_OPTIONS.map((opt) => (
+                        <option key={opt} value={opt}>
+                          {opt}
+                        </option>
+                      ))}
+                    </select>
+                  </motion.div>
                   {errors.service && (
                     <p role="alert" style={{ fontSize: '12px', color: '#C85A1E' }}>
                       {errors.service}
@@ -458,30 +490,36 @@ export default function Contact() {
                   >
                     Message
                   </label>
-                  <textarea
-                    id="message"
-                    value={form.message}
-                    onChange={(e) => setForm((f) => ({ ...f, message: e.target.value }))}
-                    onFocus={() => setTextareaFocused(true)}
-                    onBlur={() => setTextareaFocused(false)}
-                    placeholder="Tell us what you're working on..."
-                    rows={5}
-                    style={{
-                      backgroundColor: '#fff',
-                      border: `0.5px solid ${errors.message ? '#C85A1E' : textareaFocused ? '#C85A1E' : '#dedad2'}`,
-                      borderRadius: '8px',
-                      padding: '11px 14px',
-                      fontSize: '14px',
-                      color: '#1a1a1a',
-                      outline: 'none',
-                      width: '100%',
-                      resize: 'vertical',
-                      transition: 'border-color 0.2s',
-                      fontFamily: 'inherit',
-                    }}
-                    aria-invalid={!!errors.message}
-                    aria-describedby={errors.message ? 'message-error' : undefined}
-                  />
+                  <motion.div
+                    animate={{ scale: textareaFocused ? 1.005 : 1 }}
+                    transition={{ duration: 0.15 }}
+                  >
+                    <textarea
+                      id="message"
+                      value={form.message}
+                      onChange={(e) => setForm((f) => ({ ...f, message: e.target.value }))}
+                      onFocus={() => setTextareaFocused(true)}
+                      onBlur={() => setTextareaFocused(false)}
+                      placeholder="Tell us what you're working on..."
+                      rows={5}
+                      style={{
+                        backgroundColor: '#fff',
+                        border: `0.5px solid ${errors.message ? '#C85A1E' : textareaFocused ? '#C85A1E' : '#dedad2'}`,
+                        borderRadius: '8px',
+                        padding: '11px 14px',
+                        fontSize: '14px',
+                        color: '#1a1a1a',
+                        outline: 'none',
+                        width: '100%',
+                        resize: 'vertical',
+                        transition: 'border-color 0.2s, box-shadow 0.2s',
+                        fontFamily: 'inherit',
+                        boxShadow: textareaFocused && !errors.message ? '0 0 0 3px rgba(200,90,30,0.1)' : 'none',
+                      }}
+                      aria-invalid={!!errors.message}
+                      aria-describedby={errors.message ? 'message-error' : undefined}
+                    />
+                  </motion.div>
                   {errors.message && (
                     <p id="message-error" role="alert" style={{ fontSize: '12px', color: '#C85A1E' }}>
                       {errors.message}
@@ -501,11 +539,12 @@ export default function Contact() {
                   </p>
                 )}
 
-                {/* Submit button — disabled during loading to prevent double-submit */}
-                <button
+                {/* Submit — whileTap press effect + inline spinner while loading */}
+                <motion.button
                   type="submit"
                   disabled={status === 'loading'}
-                  className="w-fit self-start font-medium transition-colors duration-200 disabled:opacity-60 disabled:cursor-not-allowed"
+                  whileTap={status === 'loading' ? undefined : { scale: 0.97, transition: { duration: 0.1 } }}
+                  className="w-fit self-start font-medium inline-flex items-center gap-2 transition-colors duration-200 disabled:opacity-60 disabled:cursor-not-allowed"
                   style={{
                     backgroundColor: '#C85A1E',
                     color: '#fff',
@@ -523,8 +562,28 @@ export default function Contact() {
                     (e.currentTarget as HTMLElement).style.backgroundColor = '#C85A1E';
                   }}
                 >
-                  {status === 'loading' ? 'Sending…' : 'Send message'}
-                </button>
+                  {status === 'loading' ? (
+                    <>
+                      <motion.span
+                        animate={{ rotate: 360 }}
+                        transition={{ duration: 0.8, ease: 'linear', repeat: Infinity }}
+                        style={{
+                          display: 'inline-block',
+                          width: '14px',
+                          height: '14px',
+                          border: '2px solid rgba(255,255,255,0.3)',
+                          borderTopColor: '#fff',
+                          borderRadius: '50%',
+                          flexShrink: 0,
+                        }}
+                        aria-hidden="true"
+                      />
+                      Sending…
+                    </>
+                  ) : (
+                    'Send message'
+                  )}
+                </motion.button>
               </form>
             )}
           </motion.div>

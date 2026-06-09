@@ -1,29 +1,48 @@
+/**
+ * @file lib/constants.ts
+ * @description Single source of truth for all project-wide strings, URLs, and
+ *              data arrays. Import from here rather than hardcoding values in
+ *              components so that copy changes propagate everywhere at once.
+ *
+ * @notes All exports are `as const` so TypeScript infers the narrowest possible
+ *        literal types. This is required for SERVICE_OPTIONS to be usable as a
+ *        type-safe allowlist in the API route validation.
+ */
+
+// ─── Site Metadata ──────────────────────────────────────────────────────────────
+
+/** Calendly booking URL — used in Nav CTA, Hero primary button, and Contact section */
 export const CALENDLY_URL = 'https://calendly.com/andrew-azdevs/30min';
+
+/** Public contact email — used in Contact section and Footer */
 export const CONTACT_EMAIL = 'hello@azdevs.ca';
+
+/** Canonical production URL — used in metadata, sitemap, and JSON-LD */
 export const SITE_URL = 'https://azdevs.ca';
+
+/** Full name of the founder — used in About section */
 export const FOUNDER_NAME = 'Andrew Zaki';
+
+/** Legal / display company name — used in Footer copyright and page metadata */
 export const COMPANY_NAME = 'AZDEVS';
+
+/** City and province string — used in Hero location pill and Contact section */
 export const LOCATION = 'Toronto, Ontario';
+
+// ─── Social Links ───────────────────────────────────────────────────────────────
+
+/** LinkedIn profile URL — used in About section social links */
 export const LINKEDIN_URL = 'https://linkedin.com/in/andrewzaki';
+
+/** GitHub profile URL — used in About section social links */
 export const GITHUB_URL = 'https://github.com/andrewzaki';
+
+/** Personal portfolio URL — used in About section social links */
 export const PORTFOLIO_URL = 'https://andrewzaki.ca';
 
-export const COLORS = {
-  background: '#F7F6F2',
-  dark: '#1a1a1a',
-  accent: '#C85A1E',
-  accentLight: '#FDF0E8',
-  accentMid: '#EF9F27',
-  white: '#FFFFFF',
-  border: '#dedad2',
-  borderDark: '#2e2e2e',
-  textMuted: '#666666',
-  textSubtle: '#888888',
-  textFaint: '#aaaaaa',
-  darkSectionBg: '#1a1a1a',
-  darkCardBg: '#222222',
-} as const;
+// ─── Navigation ─────────────────────────────────────────────────────────────────
 
+/** Top-level nav links — used in Nav (desktop + mobile) and Footer navigation column */
 export const NAV_LINKS = [
   { label: 'Services', href: '#services' },
   { label: 'About', href: '#about' },
@@ -31,6 +50,12 @@ export const NAV_LINKS = [
   { label: 'Contact', href: '#contact' },
 ] as const;
 
+// ─── Services ───────────────────────────────────────────────────────────────────
+
+/**
+ * Service offerings displayed in the Services section list.
+ * Each entry has a display name, indicative price, and short description.
+ */
 export const SERVICES = [
   {
     name: 'Web and app development',
@@ -58,6 +83,12 @@ export const SERVICES = [
   },
 ] as const;
 
+// ─── How It Works ───────────────────────────────────────────────────────────────
+
+/**
+ * Three-step process displayed in the HowItWorks section.
+ * `step` is the display number; `tag` is the short value-prop callout.
+ */
 export const HOW_IT_WORKS_STEPS = [
   {
     step: 1,
@@ -79,6 +110,9 @@ export const HOW_IT_WORKS_STEPS = [
   },
 ] as const;
 
+// ─── FAQ ────────────────────────────────────────────────────────────────────────
+
+/** FAQ items displayed in the Contact section accordion */
 export const FAQ_ITEMS = [
   {
     question: "I don't have a big budget. Is that okay?",
@@ -92,6 +126,13 @@ export const FAQ_ITEMS = [
   },
 ] as const;
 
+// ─── Form Options ───────────────────────────────────────────────────────────────
+
+/**
+ * Allowed values for the "Service" select in the contact form.
+ * Also used as the server-side allowlist in app/api/contact/route.ts — keep
+ * these values in sync with what Resend receives.
+ */
 export const SERVICE_OPTIONS = [
   'Web and app development',
   'AI and automation',

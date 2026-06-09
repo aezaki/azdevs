@@ -1,24 +1,44 @@
+/**
+ * @file components/Problems.tsx
+ * @description "Three problems we fix every week" section. Presents an
+ *              asymmetric two-column card grid that surfaces the pain points
+ *              AZDEVS solves, validating the visitor's situation before the
+ *              services pitch.
+ *
+ * @section Problems (id="problems")
+ * @dependencies framer-motion, @tabler/icons-react, lib/animations
+ *
+ * @notes ProblemCard uses onMouseEnter/Leave on the motion.div to update inline
+ *        styles because Tailwind group-hover utilities cannot override inline
+ *        `style` props (inline styles have higher CSS specificity). The icon
+ *        container uses `text-white` so Tabler icons inherit currentColor and
+ *        render white — the group-hover bg change then shifts the container
+ *        to accent orange while the icon colour stays inherited.
+ */
+
 'use client';
 
 import { motion } from 'framer-motion';
 import { IconDeviceLaptop, IconRefresh, IconBulb } from '@tabler/icons-react';
 import { scrollReveal } from '@/lib/animations';
 
-function ProblemCard({
-  icon: Icon,
-  headline,
-  body,
-  featured,
-  cta,
-  delay,
-}: {
-  icon: React.ElementType;
+// ─── Types ─────────────────────────────────────────────────────────────────────
+
+// Typed to the minimum interface AZDEVS icons satisfy, avoiding `React.ElementType`
+// which is too broad (accepts strings like "div")
+interface ProblemCardProps {
+  icon: React.ComponentType<{ size?: number }>;
   headline: string;
   body: string;
+  bodyExtra?: string;
   featured?: boolean;
   cta?: string;
   delay: number;
-}) {
+}
+
+// ─── Sub-components ────────────────────────────────────────────────────────────
+
+function ProblemCard({ icon: Icon, headline, body, bodyExtra, featured, cta, delay }: ProblemCardProps) {
   return (
     <motion.div
       {...scrollReveal(delay)}
@@ -40,17 +60,16 @@ function ProblemCard({
         (e.currentTarget as HTMLElement).style.borderColor = '#eae7e0';
       }}
     >
-      <div
-        className="flex items-center justify-center flex-shrink-0 transition-colors duration-200 group-hover:[background-color:#C85A1E]"
-        style={{
-          width: '40px',
-          height: '40px',
-          backgroundColor: '#1a1a1a',
-          borderRadius: '10px',
-        }}
-      >
-        <Icon size={20} color="#F7F6F2" />
+      {/*
+       * Icon container: bg-[#1a1a1a] with text-white so the Tabler icon inherits
+       * white via currentColor. group-hover:bg-[#C85A1E] shifts the container
+       * to accent on card hover. Note: bg must be in Tailwind (not inline style)
+       * so group-hover can override it — inline styles have higher specificity.
+       */}
+      <div className="w-10 h-10 rounded-lg bg-[#1a1a1a] flex items-center justify-center text-white group-hover:bg-[#C85A1E] transition-colors duration-200">
+        <Icon size={20} />
       </div>
+
       <div className="flex flex-col gap-2 flex-1">
         <h3
           style={{
@@ -64,7 +83,12 @@ function ProblemCard({
           {headline}
         </h3>
         <p style={{ fontSize: '15px', color: '#666', lineHeight: 1.7 }}>{body}</p>
+        {bodyExtra && (
+          <p style={{ fontSize: '15px', color: '#666', lineHeight: 1.7 }}>{bodyExtra}</p>
+        )}
       </div>
+
+      {/* Optional call-to-action hint text — appears at full opacity on hover */}
       {cta && (
         <p
           className="text-sm mt-auto transition-opacity duration-200 group-hover:opacity-100"
@@ -77,6 +101,8 @@ function ProblemCard({
   );
 }
 
+// ─── Section ───────────────────────────────────────────────────────────────────
+
 export default function Problems() {
   return (
     <section
@@ -85,7 +111,8 @@ export default function Problems() {
       id="problems"
     >
       <div className="mx-auto max-w-[1200px]">
-        {/* Header */}
+
+        {/* Section header */}
         <motion.div
           {...scrollReveal()}
           className="mb-10 md:mb-12"
@@ -114,17 +141,21 @@ export default function Problems() {
           </p>
         </motion.div>
 
-        {/* Asymmetric grid: 2-col on md+, single-col on mobile */}
+        {/*
+         * Asymmetric grid: Card 01 spans both rows on desktop so it appears
+         * taller/featured alongside the two smaller stacked cards.
+         */}
         <div
           className="grid gap-4 grid-cols-1 md:grid-cols-[1fr_1fr]"
           style={{ gridTemplateRows: 'auto auto' }}
         >
-          {/* Card 01 — spans 2 rows on desktop */}
+          {/* Card 01 — featured, spans both rows on desktop */}
           <div className="md:[grid-row:1/3]">
             <ProblemCard
               icon={IconDeviceLaptop}
               headline="Your website is embarrassing you"
               body="It was built years ago, looks rough on mobile, and you cringe a little every time you hand out your business card. A bad website doesn't just look unprofessional — it's actively costing you customers."
+              bodyExtra="Whether you need a full redesign or just want something that actually works on mobile — we scope it to what makes sense for your budget and get it done."
               featured
               cta="We can fix this →"
               delay={0.1}
@@ -147,6 +178,7 @@ export default function Problems() {
             delay={0.3}
           />
         </div>
+
       </div>
     </section>
   );

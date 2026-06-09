@@ -1,3 +1,18 @@
+/**
+ * @file components/HowItWorks.tsx
+ * @description Three-step process section that explains the AZDEVS engagement
+ *              model: call → scoping → delivery. Each card stagger-reveals on
+ *              scroll and shows a numbered badge, headline, body, and value-prop tag.
+ *
+ * @section How it works (id="how-it-works")
+ * @dependencies framer-motion, lib/animations, lib/constants
+ *
+ * @notes The step-number badge uses Tailwind bg classes (not inline backgroundColor)
+ *        so that group-hover:bg-[#C85A1E] can override it — inline styles have
+ *        higher specificity than Tailwind utilities and would prevent the hover
+ *        colour from applying.
+ */
+
 'use client';
 
 import { motion } from 'framer-motion';
@@ -12,7 +27,8 @@ export default function HowItWorks() {
       style={{ backgroundColor: '#FFFFFF' }}
     >
       <div className="mx-auto max-w-[1200px]">
-        {/* Header */}
+
+        {/* Section header */}
         <motion.div
           {...scrollReveal()}
           className="mb-10 md:mb-12"
@@ -37,7 +53,7 @@ export default function HowItWorks() {
           </h2>
         </motion.div>
 
-        {/* Steps grid */}
+        {/* Steps — stagger each card's reveal by 100ms */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4 md:gap-5">
           {HOW_IT_WORKS_STEPS.map((step, i) => (
             <motion.div
@@ -60,18 +76,22 @@ export default function HowItWorks() {
                 (e.currentTarget as HTMLElement).style.backgroundColor = '#F7F6F2';
               }}
             >
-              {/* Step number */}
+              {/*
+               * Step number badge — bg is set via Tailwind (bg-[#1a1a1a]) so
+               * group-hover:bg-[#C85A1E] can override it on card hover.
+               * Do NOT add a backgroundColor inline style here.
+               */}
               <div
-                className="flex items-center justify-center flex-shrink-0 transition-colors duration-200 group-hover:[background-color:#C85A1E]"
+                className="flex items-center justify-center flex-shrink-0 bg-[#1a1a1a] group-hover:bg-[#C85A1E] transition-colors duration-200"
                 style={{
                   width: '28px',
                   height: '28px',
-                  backgroundColor: '#1a1a1a',
                   borderRadius: '50%',
                   fontSize: '12px',
                   fontWeight: 500,
                   color: '#F7F6F2',
                 }}
+                aria-hidden="true"
               >
                 {step.step}
               </div>
@@ -91,11 +111,12 @@ export default function HowItWorks() {
                 <p style={{ fontSize: '14px', color: '#666', lineHeight: 1.7 }}>{step.body}</p>
               </div>
 
-              {/* Detail tag */}
+              {/* Value-prop callout tag (e.g. "No commitment required") */}
               <p style={{ fontSize: '12px', color: '#C85A1E', fontWeight: 500 }}>{step.tag}</p>
             </motion.div>
           ))}
         </div>
+
       </div>
     </section>
   );

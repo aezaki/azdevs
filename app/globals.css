@@ -1,26 +1,48 @@
+/**
+ * globals.css
+ * Tailwind v4 entry point and global base styles for the AZDEVS site.
+ *
+ * Tailwind v4 uses a CSS-first configuration model: the @theme block below
+ * replaces tailwind.config.ts entirely. Custom tokens defined here are
+ * available as both Tailwind utilities (bg-accent, text-muted, etc.) and
+ * CSS custom properties (var(--color-accent), etc.).
+ */
+
+/* ─── Tailwind Import ───────────────────────────────────────────────────────── */
 @import "tailwindcss";
 
+/* ─── Design Tokens ─────────────────────────────────────────────────────────── */
 @theme {
+  /* Brand colours */
   --color-bg: #F7F6F2;
   --color-dark: #1a1a1a;
   --color-accent: #C85A1E;
   --color-accent-light: #FDF0E8;
   --color-accent-mid: #EF9F27;
+
+  /* Border colours */
   --color-border: #dedad2;
   --color-border-dark: #2e2e2e;
+
+  /* Text colours */
   --color-muted: #666666;
   --color-subtle: #888888;
   --color-faint: #aaaaaa;
+
+  /* Section background colours */
   --color-dark-card: #222222;
   --color-footer: #111111;
 
+  /* Typography */
   --font-sans: var(--font-geist-sans), ui-sans-serif, system-ui, sans-serif;
 
+  /* Border radius tokens */
   --radius-card: 12px;
   --radius-hero-card: 16px;
   --radius-btn: 8px;
 }
 
+/* ─── Base Reset ────────────────────────────────────────────────────────────── */
 *,
 *::before,
 *::after {
@@ -28,6 +50,7 @@
 }
 
 html {
+  /* Native smooth scroll — used by JS scrollIntoView calls in Nav/Footer */
   scroll-behavior: smooth;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
@@ -41,6 +64,7 @@ body {
   line-height: 1.75;
 }
 
+/* ─── Selection ─────────────────────────────────────────────────────────────── */
 ::selection {
   background: #FDF0E8;
   color: #C85A1E;

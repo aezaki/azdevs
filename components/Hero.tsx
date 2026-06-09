@@ -1,9 +1,29 @@
+/**
+ * @file components/Hero.tsx
+ * @description Above-the-fold hero section. Presents the primary value
+ *              proposition, two CTAs (Calendly booking + scroll-to-services),
+ *              and a fact card that reinforces trust signals on desktop.
+ *
+ * @section Hero (first section below nav)
+ * @dependencies framer-motion, lib/animations (fadeIn, ease)
+ *
+ * @notes factRows is defined at module scope (outside the component) because it
+ *        is a static data array — hoisting it avoids re-creation on every render.
+ *        scrollToServices is memoised with useCallback for the same reason.
+ *        fadeIn() is used here (not scrollReveal) because these elements must
+ *        animate on page load, not on scroll entry.
+ */
+
 'use client';
 
+import { useCallback } from 'react';
 import { motion } from 'framer-motion';
 import { CALENDLY_URL, LOCATION } from '@/lib/constants';
 import { fadeIn, ease } from '@/lib/animations';
 
+// ─── Static Data ───────────────────────────────────────────────────────────────
+
+// Trust-signal rows shown in the desktop fact card (hidden on mobile)
 const factRows = [
   { label: 'Avg. project turnaround', tag: '2 to 4 weeks' },
   { label: 'Discovery call', tag: 'Free, no pitch' },
@@ -11,11 +31,14 @@ const factRows = [
   { label: 'Code ownership', tag: '100% yours' },
 ];
 
+// ─── Component ─────────────────────────────────────────────────────────────────
+
 export default function Hero() {
-  const scrollToServices = () => {
+  // Memoised so the function reference is stable across renders
+  const scrollToServices = useCallback(() => {
     const el = document.querySelector('#services');
     if (el) el.scrollIntoView({ behavior: 'smooth' });
-  };
+  }, []);
 
   return (
     <section
@@ -23,24 +46,28 @@ export default function Hero() {
       style={{ backgroundColor: '#F7F6F2' }}
     >
       <div className="mx-auto max-w-[1200px] px-5 md:px-12">
-        {/* Two-column on lg, single column on mobile */}
+        {/* Two-column on lg+, single column on mobile */}
         <div className="grid grid-cols-1 lg:grid-cols-[1.15fr_0.85fr] gap-8 items-center">
-          {/* Left column */}
+
+          {/* ── Left column: copy + CTAs ── */}
           <div className="flex flex-col gap-6">
-            {/* Pill tag */}
+
+            {/* Location pill */}
             <motion.div
               {...fadeIn(0)}
               className="flex items-center gap-2"
               style={{ fontSize: '12px', color: '#888' }}
             >
+              {/* Amber dot signals "active / open for work" */}
               <span
                 className="w-2 h-2 rounded-full flex-shrink-0"
                 style={{ backgroundColor: '#EF9F27' }}
+                aria-hidden="true"
               />
               {LOCATION}
             </motion.div>
 
-            {/* H1 */}
+            {/* Page's single h1 — contains the primary keyword phrase */}
             <motion.h1
               {...fadeIn(0.1)}
               style={{
@@ -57,7 +84,7 @@ export default function Hero() {
               </em>
             </motion.h1>
 
-            {/* Subtitle */}
+            {/* Supporting subtitle */}
             <motion.p
               {...fadeIn(0.2)}
               style={{ fontSize: '16px', color: '#666666', lineHeight: 1.75, maxWidth: '480px' }}
@@ -66,7 +93,7 @@ export default function Hero() {
               GTA. No fluff, no bloated agencies. Just good work at a fair price.
             </motion.p>
 
-            {/* Buttons */}
+            {/* Primary CTA (Calendly) + secondary CTA (scroll to services) */}
             <motion.div {...fadeIn(0.3)} className="flex flex-wrap gap-3">
               <a
                 href={CALENDLY_URL}
@@ -86,6 +113,7 @@ export default function Hero() {
               >
                 Book a free call
               </a>
+
               <button
                 onClick={scrollToServices}
                 className="inline-flex items-center font-medium transition-all duration-200 cursor-pointer bg-transparent"
@@ -105,7 +133,7 @@ export default function Hero() {
             </motion.div>
           </div>
 
-          {/* Right column — fact card (hidden on mobile, visible lg+) */}
+          {/* ── Right column: fact card (desktop only) ── */}
           <motion.div
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
@@ -117,6 +145,7 @@ export default function Hero() {
               border: '0.5px solid #dedad2',
               overflow: 'hidden',
             }}
+            aria-label="At a glance"
           >
             {factRows.map((row, i) => (
               <div
@@ -144,6 +173,7 @@ export default function Hero() {
               </div>
             ))}
           </motion.div>
+
         </div>
       </div>
     </section>

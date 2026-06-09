@@ -1,3 +1,19 @@
+/**
+ * @file components/Contact.tsx
+ * @description Contact section with a two-column layout: left column has contact
+ *              details, a Calendly booking button, and an FAQ accordion; right
+ *              column has the enquiry form with validation and server submission.
+ *
+ * @section Contact (id="contact")
+ * @dependencies framer-motion, @tabler/icons-react, lib/animations, lib/constants
+ *
+ * @notes Client-side validation runs on submit via `validate()` before the fetch.
+ *        The `status` state machine (idle → loading → success | error) prevents
+ *        double-submit and shows appropriate UI for each state. Server errors
+ *        surface the error message returned by /api/contact; rate limit (429) gets
+ *        a specific user-facing message without exposing the implementation detail.
+ */
+
 'use client';
 
 import { useState } from 'react';
@@ -5,6 +21,8 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { IconMail, IconMapPin, IconPlus, IconX, IconCalendar } from '@tabler/icons-react';
 import { CALENDLY_URL, CONTACT_EMAIL, LOCATION, FAQ_ITEMS, SERVICE_OPTIONS } from '@/lib/constants';
 import { scrollReveal } from '@/lib/animations';
+
+// ─── Types ─────────────────────────────────────────────────────────────────────
 
 interface FormState {
   name: string;
@@ -20,7 +38,14 @@ interface FieldErrors {
   message?: string;
 }
 
-function FaqItem({ question, answer, open, onToggle }: {
+// ─── Sub-components ────────────────────────────────────────────────────────────
+
+function FaqItem({
+  question,
+  answer,
+  open,
+  onToggle,
+}: {
   question: string;
   answer: string;
   open: boolean;
@@ -35,6 +60,7 @@ function FaqItem({ question, answer, open, onToggle }: {
         style={{ fontSize: '14px', fontWeight: 500, color: '#1a1a1a' }}
       >
         <span>{question}</span>
+        {/* Icon rotates 45° when open to form an ✕ shape */}
         <div
           className="flex-shrink-0 transition-transform duration-200"
           style={{ transform: open ? 'rotate(45deg)' : 'rotate(0deg)' }}
@@ -43,6 +69,8 @@ function FaqItem({ question, answer, open, onToggle }: {
           <IconPlus size={16} style={{ color: '#888' }} />
         </div>
       </button>
+
+      {/* Animated height collapse — AnimatePresence handles mount/unmount */}
       <AnimatePresence initial={false}>
         {open && (
           <motion.div
@@ -83,7 +111,9 @@ function InputField({
   error?: string;
   placeholder?: string;
 }) {
+  // Local focus state drives the accent border colour without needing React context
   const [focused, setFocused] = useState(false);
+
   return (
     <div className="flex flex-col gap-1.5">
       <label htmlFor={id} style={{ fontSize: '13px', fontWeight: 500, color: '#444' }}>
@@ -120,16 +150,29 @@ function InputField({
   );
 }
 
+// ─── Section ───────────────────────────────────────────────────────────────────
+
 export default function Contact() {
+  // ─── State ──────────────────────────────────────────────────────────────────
+
+  // Index of the currently open FAQ item; null = all collapsed
   const [openFaq, setOpenFaq] = useState<number | null>(null);
+
   const [form, setForm] = useState<FormState>({ name: '', email: '', service: '', message: '' });
   const [errors, setErrors] = useState<FieldErrors>({});
+
+  // Submission state machine: idle → loading → success | error
   const [status, setStatus] = useState<'idle' | 'loading' | 'success' | 'error'>('idle');
   const [serverError, setServerError] = useState('');
 
+  // Separate focus trackers for select and textarea (not handled by InputField)
   const [selectFocused, setSelectFocused] = useState(false);
   const [textareaFocused, setTextareaFocused] = useState(false);
 
+  // ─── Validation ─────────────────────────────────────────────────────────────
+
+  // Client-side validation mirrors server-side rules in /api/contact/route.ts.
+  // Returns true only if all fields pass; populates `errors` otherwise.
   const validate = (): boolean => {
     const newErrors: FieldErrors = {};
     if (!form.name.trim()) newErrors.name = 'Name is required.';
@@ -144,28 +187,37 @@ export default function Contact() {
     return Object.keys(newErrors).length === 0;
   };
 
+  // ─── Submit handler ─────────────────────────────────────────────────────────
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!validate()) return;
+
     setStatus('loading');
     setServerError('');
+
     try {
       const res = await fetch('/api/contact', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(form),
       });
+
+      // Special-case 429 to show a friendly rate-limit message
       if (res.status === 429) {
         setServerError("You've sent too many messages recently. Please try again in an hour.");
         setStatus('error');
         return;
       }
+
       if (!res.ok) {
+        // Surface the server's first validation error if available
         const data = await res.json().catch(() => ({}));
         setServerError(data.error || 'Something went wrong. Please try again.');
         setStatus('error');
         return;
       }
+
       setStatus('success');
     } catch {
       setServerError('Network error. Please check your connection and try again.');
@@ -173,14 +225,17 @@ export default function Contact() {
     }
   };
 
+  // ─── Render ─────────────────────────────────────────────────────────────────
+
   return (
     <section
       id="contact"
       className="py-12 md:py-[72px] px-5 md:px-12"
-      style={{ backgroundColor: '#F7F6F2' }}
+      style={{ backgroundColor: '#FFFFFF' }}
     >
       <div className="mx-auto max-w-[1200px]">
-        {/* Header */}
+
+        {/* Section header */}
         <motion.div
           {...scrollReveal()}
           className="mb-12"
@@ -210,14 +265,15 @@ export default function Contact() {
           </p>
         </motion.div>
 
-        {/* Two-column layout */}
+        {/* Two-column layout: contact info + FAQ / form */}
         <div className="grid grid-cols-1 md:grid-cols-[1fr_1.2fr] gap-10 md:gap-16 items-start">
-          {/* Left column */}
+
+          {/* ── Left: contact details, Calendly CTA, FAQ accordion ── */}
           <motion.div
             {...scrollReveal(0.1)}
             className="flex flex-col gap-5"
           >
-            {/* Contact details */}
+            {/* Contact detail rows */}
             <a
               href={`mailto:${CONTACT_EMAIL}`}
               className="inline-flex items-center gap-2 transition-colors duration-200"
@@ -225,20 +281,21 @@ export default function Contact() {
               onMouseEnter={(e) => (e.currentTarget.style.color = '#C85A1E')}
               onMouseLeave={(e) => (e.currentTarget.style.color = '#444')}
             >
-              <IconMail size={16} style={{ color: '#888', flexShrink: 0 }} />
+              <IconMail size={16} style={{ color: '#888', flexShrink: 0 }} aria-hidden="true" />
               {CONTACT_EMAIL}
             </a>
+
             <p className="inline-flex items-center gap-2" style={{ fontSize: '14px', color: '#666' }}>
-              <IconMapPin size={16} style={{ color: '#888', flexShrink: 0 }} />
+              <IconMapPin size={16} style={{ color: '#888', flexShrink: 0 }} aria-hidden="true" />
               {LOCATION}
             </p>
 
-            {/* Calendly button */}
+            {/* Calendly booking CTA */}
             <a
               href={CALENDLY_URL}
               target="_blank"
               rel="noopener noreferrer"
-              className="inline-flex items-center gap-2 font-medium transition-colors duration-200 self-start"
+              className="inline-flex items-center gap-2 font-medium transition-colors duration-200 w-fit self-start"
               style={{
                 backgroundColor: '#1a1a1a',
                 color: '#F7F6F2',
@@ -249,11 +306,11 @@ export default function Contact() {
               onMouseEnter={(e) => (e.currentTarget.style.backgroundColor = '#C85A1E')}
               onMouseLeave={(e) => (e.currentTarget.style.backgroundColor = '#1a1a1a')}
             >
-              <IconCalendar size={16} />
+              <IconCalendar size={16} aria-hidden="true" />
               Book a call on Calendly
             </a>
 
-            {/* Divider */}
+            {/* FAQ accordion */}
             <div style={{ borderTop: '0.5px solid #dedad2', paddingTop: '20px', marginTop: '4px' }}>
               <p
                 className="uppercase mb-4"
@@ -275,11 +332,10 @@ export default function Contact() {
             </div>
           </motion.div>
 
-          {/* Right column — form */}
-          <motion.div
-            {...scrollReveal(0.15)}
-          >
+          {/* ── Right: form or success state ── */}
+          <motion.div {...scrollReveal(0.15)}>
             {status === 'success' ? (
+              // Success confirmation card
               <div
                 className="flex flex-col gap-4 items-start"
                 style={{
@@ -299,6 +355,7 @@ export default function Contact() {
                     alignItems: 'center',
                     justifyContent: 'center',
                   }}
+                  aria-hidden="true"
                 >
                   <IconMail size={20} style={{ color: '#C85A1E' }} />
                 </div>
@@ -310,6 +367,7 @@ export default function Contact() {
                 </p>
               </div>
             ) : (
+              // Contact form
               <form
                 onSubmit={handleSubmit}
                 noValidate
@@ -323,7 +381,7 @@ export default function Contact() {
                   gap: '20px',
                 }}
               >
-                {/* Name + Email row */}
+                {/* Name + Email side-by-side on sm+ */}
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   <InputField
                     label="Name"
@@ -344,7 +402,7 @@ export default function Contact() {
                   />
                 </div>
 
-                {/* Service */}
+                {/* Service select */}
                 <div className="flex flex-col gap-1.5">
                   <label
                     htmlFor="service"
@@ -369,6 +427,7 @@ export default function Contact() {
                       width: '100%',
                       transition: 'border-color 0.2s',
                       appearance: 'none',
+                      // Custom chevron SVG replaces the browser default arrow
                       backgroundImage: `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%23888' stroke-width='2'%3E%3Cpolyline points='6 9 12 15 18 9'/%3E%3C/svg%3E")`,
                       backgroundRepeat: 'no-repeat',
                       backgroundPosition: 'right 14px center',
@@ -391,7 +450,7 @@ export default function Contact() {
                   )}
                 </div>
 
-                {/* Message */}
+                {/* Message textarea */}
                 <div className="flex flex-col gap-1.5">
                   <label
                     htmlFor="message"
@@ -430,23 +489,23 @@ export default function Contact() {
                   )}
                 </div>
 
-                {/* Server error */}
+                {/* Server-side error banner */}
                 {status === 'error' && serverError && (
                   <p
                     role="alert"
                     className="flex items-center gap-2"
                     style={{ fontSize: '13px', color: '#C85A1E' }}
                   >
-                    <IconX size={14} />
+                    <IconX size={14} aria-hidden="true" />
                     {serverError}
                   </p>
                 )}
 
-                {/* Submit */}
+                {/* Submit button — disabled during loading to prevent double-submit */}
                 <button
                   type="submit"
                   disabled={status === 'loading'}
-                  className="font-medium transition-colors duration-200 disabled:opacity-60 disabled:cursor-not-allowed"
+                  className="w-fit self-start font-medium transition-colors duration-200 disabled:opacity-60 disabled:cursor-not-allowed"
                   style={{
                     backgroundColor: '#C85A1E',
                     color: '#fff',
@@ -455,7 +514,6 @@ export default function Contact() {
                     fontSize: '14px',
                     border: 'none',
                     cursor: status === 'loading' ? 'not-allowed' : 'pointer',
-                    width: '100%',
                   }}
                   onMouseEnter={(e) => {
                     if (status !== 'loading')
@@ -470,6 +528,7 @@ export default function Contact() {
               </form>
             )}
           </motion.div>
+
         </div>
       </div>
     </section>

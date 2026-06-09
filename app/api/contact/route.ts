@@ -200,9 +200,9 @@ export async function POST(req: NextRequest) {
   // ── Send email ────────────────────────────────────────────────────────────────
   try {
     await resend.emails.send({
-      // TODO: Replace onboarding@resend.dev with a verified sender address
+
       // (e.g. noreply@azdevs.ca) once the domain is verified in the Resend dashboard.
-      from: 'AZDEVS Contact Form <onboarding@resend.dev>',
+      from: 'AZDEVS Contact Form <hello@azdevs.ca>',
       to: contactEmail,
       // replyTo ensures clicking "Reply" in the inbox goes directly to the enquirer
       replyTo: email,

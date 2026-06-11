@@ -13,6 +13,7 @@
 
 import type { Metadata } from 'next';
 import { Geist, Bricolage_Grotesque } from 'next/font/google';
+import { Analytics } from '@vercel/analytics/next';
 import './globals.css';
 import { SITE_URL, COMPANY_NAME, LOCATION } from '@/lib/constants';
 
@@ -108,6 +109,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
           type="application/ld+json"
           dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
         />
+        <Analytics />
       </body>
     </html>
   );

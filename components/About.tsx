@@ -15,19 +15,17 @@
  *        The avatar entrance uses a spring (stiffness:200, damping:20) so it
  *        materialises with slight overshoot rather than a flat fade.
  *
- *        The eyebrow decorative rule animates scaleX from 0→1 with transformOrigin
- *        'left' so it draws left-to-right — uses scaleX (GPU-composited) not width.
- *
- *        useReducedMotion: all spatial animations (scale, y) disabled.
+ *        useReducedMotion: all spatial animations (scale, x, y) disabled.
  */
 
 'use client';
 
 import { useState } from 'react';
+import Image from 'next/image';
 import { motion, useReducedMotion } from 'framer-motion';
 import { IconBrandLinkedin, IconBrandGithub, IconWorld } from '@tabler/icons-react';
 import { FOUNDER_NAME, LINKEDIN_URL, GITHUB_URL, PORTFOLIO_URL } from '@/lib/constants';
-import { scrollReveal, ease } from '@/lib/animations';
+import { scrollReveal, scrollRevealReduced, springTransition, ease } from '@/lib/animations';
 
 // ─── Types ─────────────────────────────────────────────────────────────────────
 
@@ -58,14 +56,14 @@ function SocialPill({ label, href, icon: Icon }: SocialLink) {
       rel="noopener noreferrer"
       className="inline-flex items-center gap-1.5 text-[13px] min-h-[44px] transition-colors duration-200"
       style={{
-        border: '0.5px solid #f0c4a8',
-        color: '#C85A1E',
+        border: '0.5px solid var(--color-accent-border)',
+        color: 'var(--color-accent-text)',
         padding: '5px 12px',
         borderRadius: '20px',
-        backgroundColor: hovered ? '#FDF0E8' : 'transparent',
+        backgroundColor: hovered ? 'var(--color-accent-light)' : 'transparent',
         transition: 'background-color 0.15s',
       }}
-      whileHover={prefersReducedMotion ? undefined : { y: -2, transition: { duration: 0.15, type: 'spring', stiffness: 300, damping: 25 } }}
+      whileHover={prefersReducedMotion ? undefined : { y: -2, transition: springTransition }}
       onHoverStart={() => setHovered(true)}
       onHoverEnd={() => setHovered(false)}
     >
@@ -90,18 +88,38 @@ export default function About() {
     <section
       id="about"
       className="py-12 md:py-[72px] px-5 md:px-12"
-      style={{ backgroundColor: '#F7F6F2' }}
+      style={{ backgroundColor: 'var(--color-bg)' }}
     >
       <div className="mx-auto max-w-[1200px]">
+
+        {/* Section heading — enters from the left: a personal statement, not a category label */}
+        <motion.h2
+          initial={{ opacity: 0, x: prefersReducedMotion ? 0 : -16 }}
+          whileInView={{ opacity: 1, x: 0 }}
+          viewport={{ once: true, amount: 0.2 }}
+          transition={{ duration: prefersReducedMotion ? 0.4 : 0.65, ease }}
+          style={{
+            fontSize: 'var(--type-section-heading)',
+            fontWeight: 600,
+            letterSpacing: '-0.04em',
+            lineHeight: 1.1,
+            color: 'var(--color-dark)',
+            maxWidth: '600px',
+            marginBottom: '40px',
+          }}
+        >
+          Built by a developer who got tired of watching small businesses get overcharged.
+        </motion.h2>
+
         {/* Both columns wrapped in a single motion.div so they enter simultaneously */}
         <motion.div
-          {...scrollReveal()}
+          {...(prefersReducedMotion ? scrollRevealReduced(0.1) : scrollReveal(0.1))}
           className="grid grid-cols-1 md:grid-cols-[1fr_1.5fr] gap-10 md:gap-16 items-start"
         >
-          {/* ── Left column: avatar + social links ── */}
+          {/* ── Left column: avatar + name + social links ── */}
           <div className="flex flex-col gap-5">
-            <div className="flex flex-col gap-3">
-              {/* Avatar — springs in from scale:0.85 so it materialises with weight */}
+            <div className="flex flex-col gap-4">
+              {/* Portrait — springs in from scale:0.85 so it materialises with weight */}
               <motion.div
                 initial={{ scale: prefersReducedMotion ? 1 : 0.85, opacity: 0 }}
                 whileInView={{ scale: 1, opacity: 1 }}
@@ -112,34 +130,35 @@ export default function About() {
                     ? undefined
                     : { scale: 1.03, transition: { duration: 0.2 } }
                 }
-                className="flex items-center justify-center flex-shrink-0 cursor-default"
+                className="flex-shrink-0 cursor-default"
                 style={{
-                  width: '72px',
-                  height: '72px',
-                  backgroundColor: '#1a1a1a',
+                  width: '220px',
+                  height: '220px',
                   borderRadius: '50%',
-                  fontSize: '20px',
-                  fontWeight: 500,
-                  color: '#F7F6F2',
-                  letterSpacing: '1px',
+                  overflow: 'hidden',
                 }}
                 onMouseEnter={(e) =>
                   ((e.currentTarget as HTMLElement).style.boxShadow =
-                    '0 8px 24px rgba(0,0,0,0.18)')
+                    '0 12px 32px rgba(0,0,0,0.20)')
                 }
                 onMouseLeave={(e) =>
                   ((e.currentTarget as HTMLElement).style.boxShadow = 'none')
                 }
-                aria-hidden="true"
               >
-                AZ
+                <Image
+                  src="/andrew.png"
+                  alt="Andrew Zaki, founder of AZDEVS"
+                  width={220}
+                  height={220}
+                  style={{ objectFit: 'cover', display: 'block' }}
+                />
               </motion.div>
 
               <div>
-                <p style={{ fontSize: '15px', fontWeight: 500, color: '#1a1a1a' }}>
+                <p style={{ fontSize: '18px', fontWeight: 600, color: 'var(--color-dark)', letterSpacing: '-0.02em' }}>
                   {FOUNDER_NAME}
                 </p>
-                <p style={{ fontSize: '13px', color: '#888' }}>Founder, AZDEVS</p>
+                <p style={{ fontSize: '14px', color: 'var(--color-muted)', marginTop: '2px' }}>Founder, AZDEVS</p>
               </div>
             </div>
 
@@ -151,47 +170,14 @@ export default function About() {
             </div>
           </div>
 
-          {/* ── Right column: founder story ── */}
+          {/* ── Right column: body copy only ── */}
           <div className="flex flex-col gap-5">
-            <div>
-              {/* Decorative rule draws left-to-right using scaleX (GPU-composited) */}
-              <motion.div
-                initial={{ scaleX: 0 }}
-                whileInView={{ scaleX: 1 }}
-                viewport={{ once: true, amount: 0.1 }}
-                transition={{ duration: 0.5, ease, delay: 0.1 }}
-                style={{
-                  width: '40px',
-                  height: '1px',
-                  backgroundColor: '#dedad2',
-                  transformOrigin: 'left',
-                  marginBottom: '12px',
-                }}
-              />
-              <p
-                className="uppercase mb-3"
-                style={{ fontSize: '11px', letterSpacing: '2.5px', color: '#aaaaaa' }}
-              >
-                About us
-              </p>
-              <h2
-                style={{
-                  fontSize: 'clamp(28px, 3vw, 38px)',
-                  fontWeight: 500,
-                  letterSpacing: '-1.5px',
-                  lineHeight: 1.1,
-                  color: '#1a1a1a',
-                }}
-              >
-                Built by a developer who got tired of watching small businesses get overcharged.
-              </h2>
-            </div>
-            <p style={{ fontSize: '16px', color: '#666', lineHeight: 1.8 }}>
+            <p style={{ fontSize: '16px', color: 'var(--color-muted)', lineHeight: 1.8, maxWidth: '65ch' }}>
               Most agencies quote $15,000 for a website that should cost $2,000. We started AZDEVS
               because good software shouldn&apos;t be out of reach for a small business or a
               first-time founder.
             </p>
-            <p style={{ fontSize: '16px', color: '#666', lineHeight: 1.8 }}>
+            <p style={{ fontSize: '16px', color: 'var(--color-muted)', lineHeight: 1.8, maxWidth: '65ch' }}>
               We&apos;re a small, focused team based in Toronto. We work with a limited number of
               clients at a time so every project gets the attention it deserves.
             </p>

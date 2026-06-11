@@ -18,11 +18,11 @@
 
 'use client';
 
-import { useState } from 'react';
+import { useState, useCallback } from 'react';
 import { motion, useReducedMotion } from 'framer-motion';
 import { IconArrowRight } from '@tabler/icons-react';
 import { SERVICES } from '@/lib/constants';
-import { scrollReveal, ease } from '@/lib/animations';
+import { ease, smoothScrollTo } from '@/lib/animations';
 
 // ─── Sub-components ────────────────────────────────────────────────────────────
 
@@ -34,6 +34,7 @@ interface ServiceRowProps {
   onHoverStart: (i: number) => void;
   onHoverEnd: () => void;
   delay: number;
+  onClick: () => void;
 }
 
 function ServiceRow({
@@ -44,13 +45,20 @@ function ServiceRow({
   onHoverStart,
   onHoverEnd,
   delay,
+  onClick,
 }: ServiceRowProps) {
   const prefersReducedMotion = useReducedMotion();
   const hovered = hoveredIndex === index;
+  const [focused, setFocused] = useState(false);
 
-  // Divider recedes when a different row is hovered
-  const dividerOpacity =
-    hoveredIndex !== null && !hovered ? 0.15 : 0.4;
+  const dividerOpacity = hoveredIndex !== null && !hovered ? 0.15 : 0.4;
+
+  const handleKeyDown = (e: React.KeyboardEvent) => {
+    if (e.key === 'Enter' || e.key === ' ') {
+      e.preventDefault();
+      onClick();
+    }
+  };
 
   return (
     <motion.div
@@ -59,15 +67,23 @@ function ServiceRow({
       viewport={{ once: true, amount: 0.1 }}
       transition={{ duration: 0.4, ease, delay }}
       className="relative"
+      role="button"
+      tabIndex={0}
+      aria-label={`${service.name}: scroll to contact form`}
+      onClick={onClick}
+      onKeyDown={handleKeyDown}
+      onFocus={() => setFocused(true)}
+      onBlur={() => setFocused(false)}
       style={{
-        backgroundColor: hovered ? '#2a2a2a' : '#222222',
+        backgroundColor: hovered ? 'var(--color-dark-card-hover)' : 'var(--color-dark-card)',
         borderBottom:
           index < total - 1
             ? `0.5px solid rgba(46,46,46,${dividerOpacity})`
             : 'none',
-        // Left accent border — appears on hover
-        borderLeft: `2px solid ${hovered ? '#C85A1E' : 'transparent'}`,
-        transition: 'background-color 0.2s, border-color 0.15s',
+        outline: focused ? '2px solid var(--color-accent-mid)' : 'none',
+        outlineOffset: '-1px',
+        cursor: 'pointer',
+        transition: 'background-color 0.2s',
       }}
       onHoverStart={() => onHoverStart(index)}
       onHoverEnd={onHoverEnd}
@@ -79,27 +95,33 @@ function ServiceRow({
         className="grid items-center gap-3 px-5 md:px-7 py-4 md:py-5"
         style={{ gridTemplateColumns: '1fr auto' }}
       >
-        {/* Name, price, and (desktop-only) description */}
+        {/* Name, typicalFor, price, and (desktop-only) description */}
         <div className="flex flex-col gap-1 min-w-0">
           <span
-            className="uppercase font-medium transition-colors duration-200"
+            className="font-medium transition-colors duration-200"
             style={{
-              fontSize: '13px',
-              letterSpacing: '0.5px',
-              color: hovered ? '#F7F6F2' : '#C85A1E',
+              fontSize: '14px',
+              letterSpacing: '-0.01em',
+              color: 'var(--color-bg)',
             }}
           >
             {service.name}
           </span>
           <span
             className="transition-colors duration-200"
-            style={{ fontSize: '12px', color: hovered ? '#aaaaaa' : '#555' }}
+            style={{ fontSize: '12px', color: 'var(--color-dim)' }}
+          >
+            {service.typicalFor}
+          </span>
+          <span
+            className="transition-colors duration-200"
+            style={{ fontSize: '13px', color: 'var(--color-dim)', marginTop: '2px' }}
           >
             {service.price}
           </span>
           <p
-            className="hidden md:block mt-1"
-            style={{ fontSize: '14px', color: '#999', lineHeight: 1.6 }}
+            className="line-clamp-2 md:line-clamp-none mt-1"
+            style={{ fontSize: '13px', color: 'var(--color-dim)', lineHeight: 1.6 }}
           >
             {service.description}
           </p>
@@ -121,7 +143,7 @@ function ServiceRow({
         >
           <IconArrowRight
             size={18}
-            style={{ color: hovered ? '#C85A1E' : '#666', transition: 'color 0.2s' }}
+            style={{ color: hovered ? 'var(--color-accent)' : 'var(--color-subtle)', transition: 'color 0.2s' }}
           />
         </motion.div>
       </motion.div>
@@ -132,31 +154,36 @@ function ServiceRow({
 // ─── Section ───────────────────────────────────────────────────────────────────
 
 export default function Services() {
+  const prefersReducedMotion = useReducedMotion();
   const [hoveredIndex, setHoveredIndex] = useState<number | null>(null);
+
+  const scrollToContact = useCallback(() => {
+    smoothScrollTo('#contact');
+  }, []);
 
   return (
     <section
       id="services"
       className="py-12 md:py-[72px] px-5 md:px-12"
-      style={{ backgroundColor: '#1a1a1a' }}
+      style={{ backgroundColor: 'var(--color-dark)' }}
     >
       <div className="mx-auto max-w-[1200px]">
 
-        {/* Section header */}
-        <motion.div {...scrollReveal()} className="mb-8 md:mb-10">
-          <p
-            className="uppercase mb-3"
-            style={{ fontSize: '11px', letterSpacing: '2.5px', color: '#555' }}
-          >
-            What we do
-          </p>
+        {/* Section header — faster, tighter rise to match the section's assertive character */}
+        <motion.div
+          initial={{ opacity: 0, y: prefersReducedMotion ? 0 : 12 }}
+          whileInView={{ opacity: 1, y: 0 }}
+          viewport={{ once: true, amount: 0.2 }}
+          transition={{ duration: prefersReducedMotion ? 0.4 : 0.45, ease }}
+          className="mb-8 md:mb-10"
+        >
           <h2
             style={{
-              fontSize: 'clamp(28px, 3vw, 38px)',
-              fontWeight: 500,
-              letterSpacing: '-1.2px',
+              fontSize: 'var(--type-section-heading)',
+              fontWeight: 600,
+              letterSpacing: '-0.03em',
               lineHeight: 1.2,
-              color: '#F7F6F2',
+              color: 'var(--color-bg)',
             }}
           >
             Four ways we can help.
@@ -165,10 +192,13 @@ export default function Services() {
 
         {/* Container animates in as a whole, then each row staggers */}
         <motion.div
-          {...scrollReveal(0.1)}
+          initial={{ opacity: 0, y: prefersReducedMotion ? 0 : 12 }}
+          whileInView={{ opacity: 1, y: 0 }}
+          viewport={{ once: true, amount: 0.2 }}
+          transition={{ duration: prefersReducedMotion ? 0.4 : 0.45, ease, delay: 0.1 }}
           style={{
-            border: '0.5px solid #2e2e2e',
-            borderRadius: '12px',
+            border: '0.5px solid var(--color-border-dark)',
+            borderRadius: 'var(--radius-card)',
             overflow: 'hidden',
           }}
         >
@@ -182,6 +212,7 @@ export default function Services() {
               onHoverStart={(idx) => setHoveredIndex(idx)}
               onHoverEnd={() => setHoveredIndex(null)}
               delay={0.15 + i * 0.07}
+              onClick={scrollToContact}
             />
           ))}
         </motion.div>

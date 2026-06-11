@@ -59,25 +59,29 @@ export const NAV_LINKS = [
 export const SERVICES = [
   {
     name: 'Web and app development',
-    price: '~ $800 and up',
+    price: 'from $800',
+    typicalFor: 'Restaurant sites, booking systems, client portals, e-commerce',
     description:
       'Clean, fast sites and web apps that reflect how good your business is. Booking flows, client portals, whatever you need built.',
   },
   {
     name: 'AI and automation',
-    price: '~ $800 and up',
+    price: 'from $800',
+    typicalFor: 'Replacing manual data entry, invoice processing, email workflows',
     description:
       "We find what's eating your time and build something that handles it automatically. Runs quietly in the background.",
   },
   {
     name: 'MVP development',
-    price: '~ $3,000 and up',
+    price: 'from $3,000',
+    typicalFor: 'First apps, startup prototypes, investor demos',
     description:
       "Tight scope, fast build, something real you can put in front of users or investors. No unnecessary complexity.",
   },
   {
     name: 'Ongoing support',
-    price: '~ $200/mo and up',
+    price: 'from $200/mo',
+    typicalFor: 'Sites or apps that need updates, security patches, or new features',
     description:
       "Monthly plans so your site or app stays up to date, secure, and working the way it should. We don't disappear after launch.",
   },
@@ -99,7 +103,7 @@ export const HOW_IT_WORKS_STEPS = [
   {
     step: 2,
     headline: 'We scope it out together',
-    body: "You get a clear proposal — what we're building, what it costs, and how long it takes. No surprises after you say yes.",
+    body: "You get a clear proposal: what we're building, what it costs, and how long it takes. No surprises after you say yes.",
     tag: 'Fixed price, no hourly billing',
   },
   {
@@ -122,7 +126,22 @@ export const FAQ_ITEMS = [
   {
     question: "I'm not sure exactly what I need yet. Should I still reach out?",
     answer:
-      "Absolutely. Most people who contact us don't have it fully figured out — that's what the first call is for. Come with the problem, not the solution. We'll work out the rest together.",
+      "Absolutely. Most people who contact us don't have it fully figured out. That's what the first call is for. Come with the problem, not the solution. We'll work out the rest together.",
+  },
+  {
+    question: "How long does a typical project take?",
+    answer:
+      "Most web projects ship in 2 to 4 weeks. Automations and integrations typically take 3 to 6 weeks depending on scope. You get a timeline in your proposal before anything starts.",
+  },
+  {
+    question: "What do I need to have ready before we talk?",
+    answer:
+      "Nothing. Show up with your problem. The more specific you can be about what you're trying to solve, the better, but we can start from scratch.",
+  },
+  {
+    question: "Do you work with businesses outside Toronto?",
+    answer:
+      "Yes. Most of our work is done remotely. We're based in Toronto but work with clients across Canada.",
   },
 ] as const;
 

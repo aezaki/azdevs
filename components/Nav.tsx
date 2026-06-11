@@ -1,34 +1,15 @@
-/**
- * @file components/Nav.tsx
- * @description Sticky top navigation bar with scroll-aware background, desktop
- *              link list, desktop CTA button, and animated mobile dropdown menu.
- *
- * @section Nav (fixed, z-50)
- * @dependencies framer-motion, @tabler/icons-react, next/link
- *
- * @notes The scroll listener uses `{ passive: true }` for performance and is
- *        cleaned up on unmount. handleNavClick is memoised with useCallback to
- *        avoid recreating the function on every render; NAV_LINKS is a static
- *        array so the dependency array is empty.
- *
- *        The hamburger icon is a custom three-line SVG: line 1 and 3 rotate to
- *        form an X, line 2 collapses — no icon swap needed.
- *
- *        IntersectionObserver tracks which section is active so the matching nav
- *        link shifts to #1a1a1a. #hero is observed so the indicator clears when
- *        the user scrolls back to the top (hero has no matching NAV_LINKS entry).
- */
-
 'use client';
 
 import { useState, useEffect, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { CALENDLY_URL, NAV_LINKS } from '@/lib/constants';
+import { tapPress, smoothScrollTo } from '@/lib/animations';
 
 // ─── Sub-components ────────────────────────────────────────────────────────────
 
 /** Three-line hamburger that morphs into an X via individual line transforms */
-function HamburgerIcon({ open }: { open: boolean }) {
+function HamburgerIcon({ open, scrolled }: { open: boolean; scrolled: boolean }) {
+  const lineColor = scrolled ? 'var(--color-dark)' : 'var(--color-bg)';
   return (
     <span
       className="flex flex-col justify-center items-center gap-[5px]"
@@ -42,7 +23,7 @@ function HamburgerIcon({ open }: { open: boolean }) {
           display: 'block',
           width: '18px',
           height: '1.5px',
-          backgroundColor: '#1a1a1a',
+          backgroundColor: lineColor,
           transformOrigin: 'center',
         }}
       />
@@ -53,7 +34,7 @@ function HamburgerIcon({ open }: { open: boolean }) {
           display: 'block',
           width: '18px',
           height: '1.5px',
-          backgroundColor: '#1a1a1a',
+          backgroundColor: lineColor,
         }}
       />
       <motion.span
@@ -63,7 +44,7 @@ function HamburgerIcon({ open }: { open: boolean }) {
           display: 'block',
           width: '18px',
           height: '1.5px',
-          backgroundColor: '#1a1a1a',
+          backgroundColor: lineColor,
           transformOrigin: 'center',
         }}
       />
@@ -91,6 +72,14 @@ export default function Nav() {
 
   // #hero is included so the indicator clears when scrolled back to the top
   useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape' && mobileOpen) setMobileOpen(false);
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [mobileOpen]);
+
+  useEffect(() => {
     const sectionIds = ['hero', ...NAV_LINKS.map((l) => l.href.slice(1))];
     const observer = new IntersectionObserver(
       (entries) => {
@@ -111,8 +100,7 @@ export default function Nav() {
 
   const handleNavClick = useCallback((href: string) => {
     setMobileOpen(false);
-    const el = document.querySelector(href);
-    if (el) el.scrollIntoView({ behavior: 'smooth' });
+    smoothScrollTo(href);
   }, []);
 
   // ─── Render ───────────────────────────────────────────────────────────────────
@@ -121,10 +109,10 @@ export default function Nav() {
     <motion.header
       className="fixed top-0 left-0 right-0 z-50 transition-all duration-300"
       style={{
-        backgroundColor: scrolled ? 'rgba(247,246,242,0.97)' : 'transparent',
+        backgroundColor: scrolled ? 'var(--color-nav-bg)' : 'transparent',
         backdropFilter: scrolled ? 'blur(8px)' : 'none',
         WebkitBackdropFilter: scrolled ? 'blur(8px)' : 'none',
-        boxShadow: scrolled ? '0 1px 0 #dedad2' : 'none',
+        boxShadow: scrolled ? '0 1px 0 var(--color-border)' : 'none',
       }}
     >
       <div
@@ -137,11 +125,11 @@ export default function Nav() {
           className="flex items-center gap-0 font-medium"
           style={{ letterSpacing: '2px', fontSize: '16px', textDecoration: 'none' }}
           aria-label="AZDEVS home"
-          whileHover={{ letterSpacing: '3.5px' }}
-          transition={{ duration: 0.3, ease: 'easeInOut' }}
+          whileHover={{ opacity: 0.75 }}
+          transition={{ duration: 0.2 }}
         >
-          <span style={{ color: '#1a1a1a' }}>AZ</span>
-          <span style={{ color: '#C85A1E' }}>DEVS</span>
+          <span style={{ color: scrolled ? 'var(--color-dark)' : 'var(--color-bg)' }}>AZ</span>
+          <span style={{ color: 'var(--color-accent)' }}>DEVS</span>
         </motion.a>
 
         {/* ── Desktop: nav links + CTA grouped on the right ── */}
@@ -149,19 +137,20 @@ export default function Nav() {
           <nav className="flex items-center gap-7" aria-label="Main navigation">
             {NAV_LINKS.map((link) => {
               const isActive = activeSection === link.href.slice(1);
+              const restColor = isActive
+                ? (scrolled ? 'var(--color-dark)' : 'var(--color-bg)')
+                : (scrolled ? 'var(--color-ink-light)' : 'rgba(247,246,242,0.65)');
               return (
                 <motion.button
                   key={link.href}
                   onClick={() => handleNavClick(link.href)}
                   className="text-[13px] cursor-pointer bg-transparent border-0 p-0"
-                  style={{ color: isActive ? '#1a1a1a' : '#444' }}
-                  // whileHover handles only the spatial lift — color stays in native events
-                  // so the isActive closure value is always fresh on mouseLeave
+                  style={{ color: restColor }}
                   whileHover={{ y: -1, transition: { duration: 0.15 } }}
-                  onMouseEnter={(e) => (e.currentTarget.style.color = '#C85A1E')}
-                  onMouseLeave={(e) =>
-                    (e.currentTarget.style.color = isActive ? '#1a1a1a' : '#444')
+                  onMouseEnter={(e) =>
+                    (e.currentTarget.style.color = scrolled ? 'var(--color-accent-text)' : 'var(--color-bg)')
                   }
+                  onMouseLeave={(e) => (e.currentTarget.style.color = restColor)}
                 >
                   {link.label}
                 </motion.button>
@@ -175,14 +164,27 @@ export default function Nav() {
             rel="noopener noreferrer"
             className="inline-flex items-center text-[14px] font-medium transition-colors duration-200"
             style={{
-              backgroundColor: '#1a1a1a',
-              color: '#F7F6F2',
+              backgroundColor: scrolled ? 'var(--color-dark)' : 'transparent',
+              color: 'var(--color-bg)',
+              border: scrolled ? 'none' : '1px solid rgba(247,246,242,0.45)',
               padding: '9px 20px',
               borderRadius: '8px',
             }}
-            whileTap={{ scale: 0.97, transition: { duration: 0.1 } }}
-            onMouseEnter={(e) => (e.currentTarget.style.backgroundColor = '#C85A1E')}
-            onMouseLeave={(e) => (e.currentTarget.style.backgroundColor = '#1a1a1a')}
+            whileTap={tapPress}
+            onMouseEnter={(e) => {
+              if (scrolled) {
+                e.currentTarget.style.backgroundColor = 'var(--color-accent-text)';
+              } else {
+                e.currentTarget.style.backgroundColor = 'rgba(247,246,242,0.10)';
+              }
+            }}
+            onMouseLeave={(e) => {
+              if (scrolled) {
+                e.currentTarget.style.backgroundColor = 'var(--color-dark)';
+              } else {
+                e.currentTarget.style.backgroundColor = 'transparent';
+              }
+            }}
           >
             Book a call
           </motion.a>
@@ -196,14 +198,28 @@ export default function Nav() {
             rel="noopener noreferrer"
             className="inline-flex items-center text-[13px] font-medium transition-colors duration-200"
             style={{
-              backgroundColor: '#1a1a1a',
-              color: '#F7F6F2',
+              backgroundColor: scrolled ? 'var(--color-dark)' : 'transparent',
+              color: 'var(--color-bg)',
+              border: scrolled ? 'none' : '1px solid rgba(247,246,242,0.45)',
               padding: '8px 14px',
               borderRadius: '8px',
+              minHeight: '44px',
             }}
-            whileTap={{ scale: 0.97, transition: { duration: 0.1 } }}
-            onMouseEnter={(e) => (e.currentTarget.style.backgroundColor = '#C85A1E')}
-            onMouseLeave={(e) => (e.currentTarget.style.backgroundColor = '#1a1a1a')}
+            whileTap={tapPress}
+            onMouseEnter={(e) => {
+              if (scrolled) {
+                e.currentTarget.style.backgroundColor = 'var(--color-accent-text)';
+              } else {
+                e.currentTarget.style.backgroundColor = 'rgba(247,246,242,0.10)';
+              }
+            }}
+            onMouseLeave={(e) => {
+              if (scrolled) {
+                e.currentTarget.style.backgroundColor = 'var(--color-dark)';
+              } else {
+                e.currentTarget.style.backgroundColor = 'transparent';
+              }
+            }}
           >
             Book a call
           </motion.a>
@@ -215,7 +231,7 @@ export default function Nav() {
             aria-label={mobileOpen ? 'Close menu' : 'Open menu'}
             aria-expanded={mobileOpen}
           >
-            <HamburgerIcon open={mobileOpen} />
+            <HamburgerIcon open={mobileOpen} scrolled={scrolled} />
           </button>
         </div>
       </div>
@@ -231,8 +247,8 @@ export default function Nav() {
             transition={{ duration: 0.2 }}
             className="md:hidden border-t"
             style={{
-              backgroundColor: 'rgba(247,246,242,0.98)',
-              borderColor: '#dedad2',
+              backgroundColor: 'var(--color-nav-bg-mobile)',
+              borderColor: 'var(--color-border)',
             }}
           >
             <nav className="flex flex-col px-6 py-4 gap-1" aria-label="Mobile navigation">
@@ -241,7 +257,7 @@ export default function Nav() {
                   key={link.href}
                   onClick={() => handleNavClick(link.href)}
                   className="text-left text-[14px] py-3 border-b cursor-pointer bg-transparent border-x-0 border-t-0 w-full"
-                  style={{ color: '#444', borderBottomColor: '#eae7e0' }}
+                  style={{ color: 'var(--color-ink-light)', borderBottomColor: 'var(--color-border-warm)' }}
                 >
                   {link.label}
                 </button>

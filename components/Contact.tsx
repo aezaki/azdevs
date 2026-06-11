@@ -27,11 +27,11 @@
 
 'use client';
 
-import { useState } from 'react';
-import { motion, AnimatePresence, useReducedMotion } from 'framer-motion';
+import { useState, useRef, useEffect } from 'react';
+import { motion, useReducedMotion } from 'framer-motion';
 import { IconMail, IconMapPin, IconPlus, IconX, IconCalendar } from '@tabler/icons-react';
 import { CALENDLY_URL, CONTACT_EMAIL, LOCATION, FAQ_ITEMS, SERVICE_OPTIONS } from '@/lib/constants';
-import { scrollReveal, ease } from '@/lib/animations';
+import { scrollReveal, scrollRevealReduced, ease, tapPress } from '@/lib/animations';
 
 // ─── Types ─────────────────────────────────────────────────────────────────────
 
@@ -61,48 +61,54 @@ function FaqItem({
   answer,
   open,
   onToggle,
+  index,
 }: {
   question: string;
   answer: string;
   open: boolean;
   onToggle: () => void;
+  index: number;
 }) {
+  const panelId = `faq-panel-${index}`;
+
   return (
-    <div style={{ borderBottom: '0.5px solid #dedad2' }}>
+    <div style={{ borderBottom: '0.5px solid var(--color-border)' }}>
       <button
         onClick={onToggle}
         className="flex items-center justify-between w-full py-4 text-left bg-transparent border-0 cursor-pointer gap-4"
         aria-expanded={open}
-        style={{ fontSize: '14px', fontWeight: 500, color: '#1a1a1a' }}
+        aria-controls={panelId}
+        style={{ fontSize: '14px', fontWeight: 500, color: 'var(--color-dark)' }}
       >
         <span>{question}</span>
-        {/* Framer Motion rotation — 45deg = + becomes ×, 0deg = + resting */}
         <motion.div
           animate={{ rotate: open ? 45 : 0 }}
           transition={{ duration: 0.22, ease: faqEase }}
           className="flex-shrink-0"
           aria-hidden="true"
         >
-          <IconPlus size={16} style={{ color: '#888' }} />
+          <IconPlus size={16} style={{ color: 'var(--color-subtle)' }} />
         </motion.div>
       </button>
 
-      <AnimatePresence initial={false}>
-        {open && (
-          <motion.div
-            key="answer"
-            initial={{ height: 0, opacity: 0 }}
-            animate={{ height: 'auto', opacity: 1 }}
-            exit={{ height: 0, opacity: 0 }}
-            transition={{ duration: 0.28, ease: faqEase }}
-            style={{ overflow: 'hidden' }}
-          >
-            <p className="pb-4" style={{ fontSize: '14px', color: '#666', lineHeight: 1.8 }}>
-              {answer}
-            </p>
-          </motion.div>
-        )}
-      </AnimatePresence>
+      {/* CSS grid-row trick: animates grid-template-rows 0fr→1fr — no layout thrash */}
+      <div
+        id={panelId}
+        role="region"
+        aria-hidden={!open}
+        style={{
+          display: 'grid',
+          gridTemplateRows: open ? '1fr' : '0fr',
+          transition: `grid-template-rows 0.28s cubic-bezier(${faqEase.join(',')})`,
+          overflow: 'hidden',
+        }}
+      >
+        <div style={{ overflow: 'hidden' }}>
+          <p className="pb-4" style={{ fontSize: '14px', color: 'var(--color-muted)', lineHeight: 1.8 }}>
+            {answer}
+          </p>
+        </div>
+      </div>
     </div>
   );
 }
@@ -115,6 +121,9 @@ function InputField({
   onChange,
   error,
   placeholder,
+  maxLength,
+  autoComplete,
+  required,
 }: {
   label: string;
   id: string;
@@ -123,14 +132,17 @@ function InputField({
   onChange: (v: string) => void;
   error?: string;
   placeholder?: string;
+  maxLength?: number;
+  autoComplete?: string;
+  required?: boolean;
 }) {
   const prefersReducedMotion = useReducedMotion();
   const [focused, setFocused] = useState(false);
 
   return (
     <div className="flex flex-col gap-1.5">
-      <label htmlFor={id} style={{ fontSize: '13px', fontWeight: 500, color: '#444' }}>
-        {label}
+      <label htmlFor={id} style={{ fontSize: '13px', fontWeight: 500, color: 'var(--color-ink-light)' }}>
+        {label}{required && <span style={{ color: 'var(--color-accent-text)', marginLeft: '3px' }} aria-hidden="true">*</span>}
       </label>
       {/* Wrapper scales slightly on focus — gives the input a sense of activation */}
       <motion.div
@@ -143,15 +155,18 @@ function InputField({
           value={value}
           onChange={(e) => onChange(e.target.value)}
           placeholder={placeholder}
+          maxLength={maxLength}
+          autoComplete={autoComplete}
+          required={required}
           onFocus={() => setFocused(true)}
           onBlur={() => setFocused(false)}
           style={{
-            backgroundColor: '#fff',
-            border: `0.5px solid ${error ? '#C85A1E' : focused ? '#C85A1E' : '#dedad2'}`,
-            borderRadius: '8px',
+            backgroundColor: 'var(--color-surface)',
+            border: `0.5px solid ${error ? 'var(--color-accent)' : focused ? 'var(--color-accent)' : 'var(--color-border)'}`,
+            borderRadius: 'var(--radius-btn)',
             padding: '11px 14px',
             fontSize: '14px',
-            color: '#1a1a1a',
+            color: 'var(--color-dark)',
             outline: 'none',
             width: '100%',
             transition: 'border-color 0.2s, box-shadow 0.2s',
@@ -162,7 +177,7 @@ function InputField({
         />
       </motion.div>
       {error && (
-        <p id={`${id}-error`} role="alert" style={{ fontSize: '12px', color: '#C85A1E' }}>
+        <p id={`${id}-error`} role="alert" style={{ fontSize: '12px', color: 'var(--color-accent-text)' }}>
           {error}
         </p>
       )}
@@ -180,6 +195,15 @@ export default function Contact() {
   const [openFaq, setOpenFaq] = useState<number | null>(null);
   const [form, setForm] = useState<FormState>({ name: '', email: '', service: '', message: '' });
   const [errors, setErrors] = useState<FieldErrors>({});
+  const shouldFocusError = useRef(false);
+
+  useEffect(() => {
+    if (shouldFocusError.current) {
+      shouldFocusError.current = false;
+      const firstInvalid = document.querySelector('[aria-invalid="true"]') as HTMLElement | null;
+      firstInvalid?.focus();
+    }
+  }, [errors]);
   const [status, setStatus] = useState<'idle' | 'loading' | 'success' | 'error'>('idle');
   const [serverError, setServerError] = useState('');
   const [selectFocused, setSelectFocused] = useState(false);
@@ -206,7 +230,10 @@ export default function Contact() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!validate()) return;
+    if (!validate()) {
+      shouldFocusError.current = true;
+      return;
+    }
 
     setStatus('loading');
     setServerError('');
@@ -244,35 +271,29 @@ export default function Contact() {
     <section
       id="contact"
       className="py-12 md:py-[72px] px-5 md:px-12"
-      style={{ backgroundColor: '#FFFFFF' }}
+      style={{ backgroundColor: 'var(--color-surface)' }}
     >
       <div className="mx-auto max-w-[1200px]">
 
         {/* Section header — enters first */}
         <motion.div
-          {...scrollReveal()}
+          {...(prefersReducedMotion ? scrollRevealReduced() : scrollReveal())}
           className="mb-12"
           style={{ maxWidth: '560px' }}
         >
-          <p
-            className="uppercase mb-3"
-            style={{ fontSize: '11px', letterSpacing: '2.5px', color: '#aaaaaa' }}
-          >
-            Get in touch
-          </p>
           <h2
             style={{
-              fontSize: 'clamp(28px, 3vw, 38px)',
-              fontWeight: 500,
-              letterSpacing: '-1.2px',
+              fontSize: 'var(--type-section-heading)',
+              fontWeight: 600,
+              letterSpacing: '-0.03em',
               lineHeight: 1.2,
-              color: '#1a1a1a',
+              color: 'var(--color-dark)',
               marginBottom: '12px',
             }}
           >
             Let&apos;s figure out if we&apos;re a good fit.
           </h2>
-          <p style={{ fontSize: '16px', color: '#666', lineHeight: 1.8 }}>
+          <p style={{ fontSize: '16px', color: 'var(--color-muted)', lineHeight: 1.8 }}>
             Drop us a message or book a call directly. Either way, you&apos;ll hear back within one
             business day.
           </p>
@@ -292,16 +313,16 @@ export default function Contact() {
             <a
               href={`mailto:${CONTACT_EMAIL}`}
               className="inline-flex items-center gap-2 transition-colors duration-200"
-              style={{ fontSize: '14px', color: '#444' }}
-              onMouseEnter={(e) => (e.currentTarget.style.color = '#C85A1E')}
-              onMouseLeave={(e) => (e.currentTarget.style.color = '#444')}
+              style={{ fontSize: '14px', color: 'var(--color-ink-light)' }}
+              onMouseEnter={(e) => (e.currentTarget.style.color = 'var(--color-accent-text)')}
+              onMouseLeave={(e) => (e.currentTarget.style.color = 'var(--color-ink-light)')}
             >
-              <IconMail size={16} style={{ color: '#888', flexShrink: 0 }} aria-hidden="true" />
+              <IconMail size={16} style={{ color: 'var(--color-subtle)', flexShrink: 0 }} aria-hidden="true" />
               {CONTACT_EMAIL}
             </a>
 
-            <p className="inline-flex items-center gap-2" style={{ fontSize: '14px', color: '#666' }}>
-              <IconMapPin size={16} style={{ color: '#888', flexShrink: 0 }} aria-hidden="true" />
+            <p className="inline-flex items-center gap-2" style={{ fontSize: '14px', color: 'var(--color-muted)' }}>
+              <IconMapPin size={16} style={{ color: 'var(--color-subtle)', flexShrink: 0 }} aria-hidden="true" />
               {LOCATION}
             </p>
 
@@ -312,17 +333,17 @@ export default function Contact() {
               rel="noopener noreferrer"
               className="inline-flex items-center gap-2 font-medium transition-colors duration-200 w-fit self-start"
               style={{
-                backgroundColor: '#1a1a1a',
-                color: '#F7F6F2',
-                padding: '13px 26px',
-                borderRadius: '8px',
+                backgroundColor: 'var(--color-dark)',
+                color: 'var(--color-bg)',
+                padding: '14px 26px',
+                borderRadius: 'var(--radius-btn)',
                 fontSize: '14px',
               }}
-              whileTap={{ scale: 0.97, transition: { duration: 0.1 } }}
+              whileTap={tapPress}
               onHoverStart={() => setCalHovered(true)}
               onHoverEnd={() => setCalHovered(false)}
-              onMouseEnter={(e) => (e.currentTarget.style.backgroundColor = '#C85A1E')}
-              onMouseLeave={(e) => (e.currentTarget.style.backgroundColor = '#1a1a1a')}
+              onMouseEnter={(e) => (e.currentTarget.style.backgroundColor = 'var(--color-accent-text)')}
+              onMouseLeave={(e) => (e.currentTarget.style.backgroundColor = 'var(--color-dark)')}
             >
               <motion.span
                 animate={prefersReducedMotion ? {} : { rotate: calHovered ? -12 : 0 }}
@@ -332,21 +353,16 @@ export default function Contact() {
               >
                 <IconCalendar size={16} />
               </motion.span>
-              Book a call on Calendly
+              Book a free call
             </motion.a>
 
             {/* FAQ accordion */}
-            <div style={{ borderTop: '0.5px solid #dedad2', paddingTop: '20px', marginTop: '4px' }}>
-              <p
-                className="uppercase mb-4"
-                style={{ fontSize: '11px', letterSpacing: '2.5px', color: '#aaaaaa' }}
-              >
-                Before you reach out
-              </p>
+            <div style={{ borderTop: '0.5px solid var(--color-border)', paddingTop: '20px', marginTop: '4px' }}>
               <div className="flex flex-col">
                 {FAQ_ITEMS.map((item, i) => (
                   <FaqItem
                     key={i}
+                    index={i}
                     question={item.question}
                     answer={item.answer}
                     open={openFaq === i}
@@ -366,11 +382,13 @@ export default function Contact() {
           >
             {status === 'success' ? (
               <div
+                role="status"
+                aria-live="polite"
                 className="flex flex-col gap-4 items-start"
                 style={{
-                  backgroundColor: '#fff',
-                  border: '0.5px solid #dedad2',
-                  borderRadius: '12px',
+                  backgroundColor: 'var(--color-surface)',
+                  border: '0.5px solid var(--color-border)',
+                  borderRadius: 'var(--radius-card)',
                   padding: '40px',
                 }}
               >
@@ -378,7 +396,7 @@ export default function Contact() {
                   style={{
                     width: '40px',
                     height: '40px',
-                    backgroundColor: '#FDF0E8',
+                    backgroundColor: 'var(--color-accent-light)',
                     borderRadius: '10px',
                     display: 'flex',
                     alignItems: 'center',
@@ -386,23 +404,39 @@ export default function Contact() {
                   }}
                   aria-hidden="true"
                 >
-                  <IconMail size={20} style={{ color: '#C85A1E' }} />
+                  <IconMail size={20} style={{ color: 'var(--color-accent)' }} />
                 </div>
-                <h3 style={{ fontSize: '20px', fontWeight: 500, color: '#1a1a1a' }}>
-                  Message sent.
+                <h3 style={{ fontSize: '20px', fontWeight: 600, color: 'var(--color-dark)' }}>
+                  Got it, {form.name.split(' ')[0] || 'there'}.
                 </h3>
-                <p style={{ fontSize: '15px', color: '#666', lineHeight: 1.8 }}>
-                  Thanks for reaching out. We&apos;ll get back to you within one business day.
+                <p style={{ fontSize: '15px', color: 'var(--color-muted)', lineHeight: 1.8 }}>
+                  Your message about <strong style={{ color: 'var(--color-dark)', fontWeight: 500 }}>{form.service.toLowerCase()}</strong> is in. Andrew reviews every inquiry personally and will follow up within one business day, usually the same day.
                 </p>
+                <p style={{ fontSize: '13px', color: 'var(--color-muted)', lineHeight: 1.7 }}>
+                  In the meantime, you can book a call directly if you&apos;d rather skip the back-and-forth.
+                </p>
+                <a
+                  href={CALENDLY_URL}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  style={{
+                    fontSize: '13px',
+                    color: 'var(--color-accent-text)',
+                    textDecoration: 'underline',
+                    textUnderlineOffset: '3px',
+                  }}
+                >
+                  Book a free call
+                </a>
               </div>
             ) : (
               <form
                 onSubmit={handleSubmit}
                 noValidate
                 style={{
-                  backgroundColor: '#fff',
-                  border: '0.5px solid #dedad2',
-                  borderRadius: '12px',
+                  backgroundColor: 'var(--color-surface)',
+                  border: '0.5px solid var(--color-border)',
+                  borderRadius: 'var(--radius-card)',
                   padding: '32px',
                   display: 'flex',
                   flexDirection: 'column',
@@ -417,6 +451,9 @@ export default function Contact() {
                     onChange={(v) => setForm((f) => ({ ...f, name: v }))}
                     error={errors.name}
                     placeholder="Your name"
+                    maxLength={200}
+                    autoComplete="name"
+                    required
                   />
                   <InputField
                     label="Email"
@@ -426,6 +463,9 @@ export default function Contact() {
                     onChange={(v) => setForm((f) => ({ ...f, email: v }))}
                     error={errors.email}
                     placeholder="you@example.com"
+                    maxLength={254}
+                    autoComplete="email"
+                    required
                   />
                 </div>
 
@@ -433,9 +473,9 @@ export default function Contact() {
                 <div className="flex flex-col gap-1.5">
                   <label
                     htmlFor="service"
-                    style={{ fontSize: '13px', fontWeight: 500, color: '#444' }}
+                    style={{ fontSize: '13px', fontWeight: 500, color: 'var(--color-ink-light)' }}
                   >
-                    Service
+                    Service<span style={{ color: 'var(--color-accent-text)', marginLeft: '3px' }} aria-hidden="true">*</span>
                   </label>
                   <motion.div
                     animate={{ scale: selectFocused ? 1.005 : 1 }}
@@ -448,12 +488,12 @@ export default function Contact() {
                       onFocus={() => setSelectFocused(true)}
                       onBlur={() => setSelectFocused(false)}
                       style={{
-                        backgroundColor: '#fff',
-                        border: `0.5px solid ${errors.service ? '#C85A1E' : selectFocused ? '#C85A1E' : '#dedad2'}`,
-                        borderRadius: '8px',
+                        backgroundColor: 'var(--color-surface)',
+                        border: `0.5px solid ${errors.service ? 'var(--color-accent)' : selectFocused ? 'var(--color-accent)' : 'var(--color-border)'}`,
+                        borderRadius: 'var(--radius-btn)',
                         padding: '11px 14px',
                         fontSize: '14px',
-                        color: form.service ? '#1a1a1a' : '#aaaaaa',
+                        color: form.service ? 'var(--color-dark)' : '#767676',
                         outline: 'none',
                         width: '100%',
                         transition: 'border-color 0.2s, box-shadow 0.2s',
@@ -464,6 +504,7 @@ export default function Contact() {
                         boxShadow: selectFocused && !errors.service ? '0 0 0 3px rgba(200,90,30,0.1)' : 'none',
                       }}
                       aria-invalid={!!errors.service}
+                      aria-describedby={errors.service ? 'service-error' : undefined}
                     >
                       <option value="" disabled>
                         Select a service
@@ -476,7 +517,7 @@ export default function Contact() {
                     </select>
                   </motion.div>
                   {errors.service && (
-                    <p role="alert" style={{ fontSize: '12px', color: '#C85A1E' }}>
+                    <p id="service-error" role="alert" style={{ fontSize: '12px', color: 'var(--color-accent-text)' }}>
                       {errors.service}
                     </p>
                   )}
@@ -486,9 +527,9 @@ export default function Contact() {
                 <div className="flex flex-col gap-1.5">
                   <label
                     htmlFor="message"
-                    style={{ fontSize: '13px', fontWeight: 500, color: '#444' }}
+                    style={{ fontSize: '13px', fontWeight: 500, color: 'var(--color-ink-light)' }}
                   >
-                    Message
+                    Message<span style={{ color: 'var(--color-accent-text)', marginLeft: '3px' }} aria-hidden="true">*</span>
                   </label>
                   <motion.div
                     animate={{ scale: textareaFocused ? 1.005 : 1 }}
@@ -502,13 +543,16 @@ export default function Contact() {
                       onBlur={() => setTextareaFocused(false)}
                       placeholder="Tell us what you're working on..."
                       rows={5}
+                      maxLength={5000}
+                      required
+                      aria-describedby={errors.message ? 'message-error' : 'message-count'}
                       style={{
-                        backgroundColor: '#fff',
-                        border: `0.5px solid ${errors.message ? '#C85A1E' : textareaFocused ? '#C85A1E' : '#dedad2'}`,
-                        borderRadius: '8px',
+                        backgroundColor: 'var(--color-surface)',
+                        border: `0.5px solid ${errors.message ? 'var(--color-accent)' : textareaFocused ? 'var(--color-accent)' : 'var(--color-border)'}`,
+                        borderRadius: 'var(--radius-btn)',
                         padding: '11px 14px',
                         fontSize: '14px',
-                        color: '#1a1a1a',
+                        color: 'var(--color-dark)',
                         outline: 'none',
                         width: '100%',
                         resize: 'vertical',
@@ -517,14 +561,30 @@ export default function Contact() {
                         boxShadow: textareaFocused && !errors.message ? '0 0 0 3px rgba(200,90,30,0.1)' : 'none',
                       }}
                       aria-invalid={!!errors.message}
-                      aria-describedby={errors.message ? 'message-error' : undefined}
                     />
                   </motion.div>
-                  {errors.message && (
-                    <p id="message-error" role="alert" style={{ fontSize: '12px', color: '#C85A1E' }}>
-                      {errors.message}
-                    </p>
-                  )}
+                  <div className="flex items-start justify-between gap-4">
+                    <div>
+                      {errors.message && (
+                        <p id="message-error" role="alert" style={{ fontSize: '12px', color: 'var(--color-accent-text)' }}>
+                          {errors.message}
+                        </p>
+                      )}
+                    </div>
+                    {form.message.length > 0 && (
+                      <p
+                        id="message-count"
+                        aria-live="polite"
+                        style={{
+                          fontSize: '11px',
+                          color: form.message.length > 4500 ? 'var(--color-accent-text)' : '#767676',
+                          flexShrink: 0,
+                        }}
+                      >
+                        {form.message.length.toLocaleString()} / 5,000
+                      </p>
+                    )}
+                  </div>
                 </div>
 
                 {/* Server-side error banner */}
@@ -532,34 +592,39 @@ export default function Contact() {
                   <p
                     role="alert"
                     className="flex items-center gap-2"
-                    style={{ fontSize: '13px', color: '#C85A1E' }}
+                    style={{ fontSize: '13px', color: 'var(--color-accent-text)' }}
                   >
                     <IconX size={14} aria-hidden="true" />
                     {serverError}
                   </p>
                 )}
 
+                {/* Response-time reassurance before the click */}
+                <p style={{ fontSize: '12px', color: 'var(--color-muted)', marginBottom: '-8px' }}>
+                  You&apos;ll hear back within one business day, usually the same day.
+                </p>
+
                 {/* Submit — whileTap press effect + inline spinner while loading */}
                 <motion.button
                   type="submit"
                   disabled={status === 'loading'}
-                  whileTap={status === 'loading' ? undefined : { scale: 0.97, transition: { duration: 0.1 } }}
-                  className="w-fit self-start font-medium inline-flex items-center gap-2 transition-colors duration-200 disabled:opacity-60 disabled:cursor-not-allowed"
+                  whileTap={status === 'loading' ? undefined : tapPress}
+                  className="w-full sm:w-fit sm:self-start font-medium inline-flex items-center justify-center gap-2 transition-colors duration-200 disabled:opacity-60 disabled:cursor-not-allowed"
                   style={{
-                    backgroundColor: '#C85A1E',
-                    color: '#fff',
+                    backgroundColor: 'var(--color-accent)',
+                    color: 'var(--color-surface)',
                     padding: '13px 26px',
-                    borderRadius: '8px',
+                    borderRadius: 'var(--radius-btn)',
                     fontSize: '14px',
                     border: 'none',
                     cursor: status === 'loading' ? 'not-allowed' : 'pointer',
                   }}
                   onMouseEnter={(e) => {
                     if (status !== 'loading')
-                      (e.currentTarget as HTMLElement).style.backgroundColor = '#a8481a';
+                      (e.currentTarget as HTMLElement).style.backgroundColor = 'var(--color-accent-text)';
                   }}
                   onMouseLeave={(e) => {
-                    (e.currentTarget as HTMLElement).style.backgroundColor = '#C85A1E';
+                    (e.currentTarget as HTMLElement).style.backgroundColor = 'var(--color-accent)';
                   }}
                 >
                   {status === 'loading' ? (

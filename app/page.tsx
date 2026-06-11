@@ -15,19 +15,22 @@ import Problems from '@/components/Problems';
 import Services from '@/components/Services';
 import About from '@/components/About';
 import HowItWorks from '@/components/HowItWorks';
+import Testimonial from '@/components/Testimonial';
 import Contact from '@/components/Contact';
 import Footer from '@/components/Footer';
 
 export default function Home() {
   return (
     <>
+      <a href="#main-content" className="skip-nav">Skip to main content</a>
       <Nav />
-      <main>
+      <main id="main-content">
         <Hero />
         <Problems />
         <Services />
         <About />
         <HowItWorks />
+        <Testimonial />
         <Contact />
       </main>
       <Footer />

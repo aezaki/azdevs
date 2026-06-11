@@ -14,27 +14,44 @@
 /* ─── Design Tokens ─────────────────────────────────────────────────────────── */
 @theme {
   /* Brand colours */
-  --color-bg: #F7F6F2;
+  --color-bg: oklch(97.5% 0.005 50);
+  --color-surface: #FFFFFF;
   --color-dark: #1a1a1a;
   --color-accent: #C85A1E;
   --color-accent-light: #FDF0E8;
   --color-accent-mid: #EF9F27;
 
   /* Border colours */
-  --color-border: #dedad2;
+  --color-border: oklch(88.5% 0.006 50);
   --color-border-dark: #2e2e2e;
 
   /* Text colours */
+  --color-ink-light: #444444;
   --color-muted: #666666;
+  --color-dim: #999999;
   --color-subtle: #888888;
   --color-faint: #aaaaaa;
 
+  /* Text accent — text-safe terracotta (≥6:1 on --color-bg, 6.10:1 on white) */
+  --color-accent-text: #9B4416;
+
+  /* Border variants */
+  --color-border-warm: oklch(93% 0.005 50);    /* near-neutral with terracotta whisper — card resting borders, nav separators */
+  --color-accent-border: #f0c4a8;  /* accent pill borders (social chips, etc.) */
+
+  /* Nav backdrop */
+  --color-nav-bg: oklch(97.5% 0.005 50 / 0.97);
+  --color-nav-bg-mobile: oklch(97.5% 0.005 50 / 0.98);
+
   /* Section background colours */
   --color-dark-card: #222222;
+  --color-dark-card-hover: #2c2c2c;
   --color-footer: #111111;
 
   /* Typography */
   --font-sans: var(--font-geist-sans), ui-sans-serif, system-ui, sans-serif;
+  --font-display: var(--font-bricolage), 'Arial Black', ui-sans-serif, sans-serif;
+  --type-section-heading: clamp(28px, 3vw, 38px);
 
   /* Border radius tokens */
   --radius-card: 12px;
@@ -56,16 +73,94 @@ html {
   -moz-osx-font-smoothing: grayscale;
 }
 
+@media (prefers-reduced-motion: reduce) {
+  html { scroll-behavior: auto; }
+}
+
 body {
-  background-color: #F7F6F2;
-  color: #1a1a1a;
+  background-color: var(--color-bg);
+  color: var(--color-dark);
   font-family: var(--font-geist-sans), ui-sans-serif, system-ui, sans-serif;
   font-size: 16px;
   line-height: 1.75;
+  font-optical-sizing: auto;
+  font-kerning: normal;
+}
+
+h1, h2 {
+  font-family: var(--font-display);
+  text-wrap: balance;
+}
+
+h3 {
+  text-wrap: balance;
+}
+
+p {
+  text-wrap: pretty;
 }
 
 /* ─── Selection ─────────────────────────────────────────────────────────────── */
 ::selection {
-  background: #FDF0E8;
-  color: #C85A1E;
+  background: var(--color-accent-light);
+  color: var(--color-accent-text);
+}
+
+/* ─── Focus ─────────────────────────────────────────────────────────────────── */
+/* Branded focus ring for all interactive elements */
+a:focus-visible,
+button:focus-visible,
+[role="button"]:focus-visible,
+select:focus-visible {
+  outline: 2px solid var(--color-accent);
+  outline-offset: 3px;
+  border-radius: 2px;
+}
+
+/* Form inputs use a custom border + box-shadow focus indicator instead */
+input:focus-visible,
+textarea:focus-visible {
+  outline: none;
+}
+
+/* ─── Skip navigation ───────────────────────────────────────────────────────── */
+.skip-nav {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border-width: 0;
+  text-decoration: none;
+}
+
+.skip-nav:focus-visible {
+  position: fixed;
+  inset: auto auto auto auto;
+  top: 8px;
+  left: 8px;
+  z-index: 200;
+  width: auto;
+  height: auto;
+  padding: 11px 20px;
+  margin: 0;
+  overflow: visible;
+  clip: auto;
+  white-space: normal;
+  background-color: var(--color-dark);
+  color: var(--color-bg);
+  border-radius: var(--radius-btn);
+  font-size: 14px;
+  font-weight: 500;
+  outline: none;
+}
+
+/* ─── Forms ─────────────────────────────────────────────────────────────────── */
+/* #767676 on white = 4.54:1 — meets WCAG AA for placeholder text */
+::placeholder {
+  color: #767676;
+  opacity: 1;
 }

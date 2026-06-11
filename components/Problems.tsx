@@ -24,7 +24,7 @@
 import { useState } from 'react';
 import { motion, useReducedMotion } from 'framer-motion';
 import { IconDeviceLaptop, IconRefresh, IconBulb } from '@tabler/icons-react';
-import { scrollReveal, ease } from '@/lib/animations';
+import { scrollReveal, scrollRevealReduced, ease, smoothScrollTo } from '@/lib/animations';
 
 // ─── Types ─────────────────────────────────────────────────────────────────────
 
@@ -54,6 +54,20 @@ function ProblemCard({
   const prefersReducedMotion = useReducedMotion();
   const [hovered, setHovered] = useState(false);
 
+  // Featured card uses dark (hero-matching) treatment so it reads as weighted, not just wide
+  const cardBg = featured
+    ? (hovered ? 'var(--color-dark-card-hover)' : 'var(--color-dark)')
+    : (hovered ? 'var(--color-surface)' : 'var(--color-bg)');
+  const cardBorder = hovered
+    ? 'var(--color-accent)'
+    : (featured ? 'var(--color-border-dark)' : 'var(--color-border-warm)');
+  const iconBg = featured ? 'var(--color-accent)' : (hovered ? 'var(--color-accent)' : 'var(--color-dark)');
+  const headlineColor = featured ? 'var(--color-bg)' : 'var(--color-dark)';
+  const bodyColor = featured ? 'rgba(247,246,242,0.65)' : 'var(--color-muted)';
+  const ctaColor = featured ? 'rgba(247,246,242,0.80)' : 'var(--color-accent-text)';
+  // Featured dark card: raise rest opacity to 0.75 so effective contrast (0.80*0.75=0.60 alpha) = 6.58:1
+  const ctaRestOpacity = featured ? 0.75 : 0.55;
+
   return (
     <motion.div
       initial={{ opacity: 0, x: prefersReducedMotion ? 0 : xEntrance }}
@@ -67,35 +81,28 @@ function ProblemCard({
       }
       className="flex flex-col gap-5 cursor-default h-full"
       style={{
-        backgroundColor: '#F7F6F2',
-        border: '0.5px solid #eae7e0',
-        borderRadius: '12px',
+        backgroundColor: cardBg,
+        border: `0.5px solid ${cardBorder}`,
+        borderRadius: 'var(--radius-card)',
         padding: '32px 28px',
         transition: 'background-color 0.2s, border-color 0.2s',
       }}
       onHoverStart={() => setHovered(true)}
       onHoverEnd={() => setHovered(false)}
-      onMouseEnter={(e) => {
-        (e.currentTarget as HTMLElement).style.backgroundColor = '#fff';
-        (e.currentTarget as HTMLElement).style.borderColor = '#C85A1E';
-      }}
-      onMouseLeave={(e) => {
-        (e.currentTarget as HTMLElement).style.backgroundColor = '#F7F6F2';
-        (e.currentTarget as HTMLElement).style.borderColor = '#eae7e0';
-      }}
     >
       {/*
-       * Icon container: bg-[#1a1a1a] in Tailwind so group-hover can override.
-       * The outer motion.div rotates 2deg on card hover — barely perceptible
-       * but gives the icon a sense of presence responding to attention.
+       * Icon container rotates 2deg on hover — barely perceptible but gives the
+       * icon a sense of presence. Featured card: icon is always terracotta (dark
+       * bg makes the dark default invisible), non-featured: terracotta on hover only.
        */}
       <motion.div
         animate={prefersReducedMotion ? {} : { rotate: hovered ? 2 : 0 }}
         transition={{ duration: 0.15 }}
         style={{ display: 'inline-flex' }}
       >
-        <div className="w-10 h-10 rounded-lg flex items-center justify-center text-white transition-colors duration-200"
-          style={{ backgroundColor: hovered ? '#C85A1E' : '#1a1a1a' }}
+        <div
+          className="w-10 h-10 rounded-lg flex items-center justify-center text-white transition-colors duration-200"
+          style={{ backgroundColor: iconBg }}
         >
           <Icon size={20} />
         </div>
@@ -105,40 +112,44 @@ function ProblemCard({
         <h3
           style={{
             fontSize: featured ? '22px' : '17px',
-            fontWeight: 500,
-            letterSpacing: featured ? '-0.4px' : '-0.2px',
+            fontWeight: 600,
+            letterSpacing: featured ? '-0.02em' : '-0.015em',
             lineHeight: 1.3,
-            color: '#1a1a1a',
+            color: headlineColor,
           }}
         >
           {headline}
         </h3>
-        <p style={{ fontSize: '15px', color: '#666', lineHeight: 1.8 }}>{body}</p>
+        <p style={{ fontSize: '15px', color: bodyColor, lineHeight: 1.8 }}>{body}</p>
         {bodyExtra && (
-          <p style={{ fontSize: '15px', color: '#666', lineHeight: 1.8 }}>{bodyExtra}</p>
+          <p style={{ fontSize: '15px', color: bodyColor, lineHeight: 1.8 }}>{bodyExtra}</p>
         )}
       </div>
 
-      {/* CTA hint — opacity driven by hover state (inline style > Tailwind specificity) */}
+      {/* CTA hint — scrolls to contact; opacity driven by hover state */}
       {cta && (
-        <div className="flex items-center gap-1 mt-auto">
-          <p
-            className="text-sm transition-opacity duration-200"
+        <button
+          onClick={() => smoothScrollTo('#contact')}
+          className="flex items-center gap-1 mt-auto bg-transparent border-0 p-0 cursor-pointer"
+          aria-label="Get in touch about this"
+        >
+          <span
+            className="transition-opacity duration-200"
             style={{
-              color: '#C85A1E',
-              opacity: hovered ? 1 : 0.45,
+              color: ctaColor,
+              opacity: hovered ? 1 : ctaRestOpacity,
               fontSize: '14px',
               fontWeight: 500,
             }}
           >
             {cta.replace(/\s*→$/, '')}
-          </p>
+          </span>
           <motion.span
             animate={prefersReducedMotion ? {} : { x: hovered ? 4 : 0 }}
             transition={{ type: 'spring', stiffness: 300, damping: 30 }}
             style={{
-              color: '#C85A1E',
-              opacity: hovered ? 1 : 0.45,
+              color: ctaColor,
+              opacity: hovered ? 1 : ctaRestOpacity,
               fontSize: '14px',
               fontWeight: 500,
               transition: 'opacity 0.2s',
@@ -146,7 +157,7 @@ function ProblemCard({
           >
             →
           </motion.span>
-        </div>
+        </button>
       )}
     </motion.div>
   );
@@ -155,39 +166,35 @@ function ProblemCard({
 // ─── Section ───────────────────────────────────────────────────────────────────
 
 export default function Problems() {
+  const prefersReducedMotion = useReducedMotion();
+
   return (
     <section
       className="py-12 md:py-[72px] px-5 md:px-12"
-      style={{ backgroundColor: '#FFFFFF' }}
+      style={{ backgroundColor: 'var(--color-surface)' }}
       id="problems"
     >
       <div className="mx-auto max-w-[1200px]">
 
         {/* Section header — y:24 reveal, fires first */}
         <motion.div
-          {...scrollReveal()}
+          {...(prefersReducedMotion ? scrollRevealReduced() : scrollReveal())}
           className="mb-10 md:mb-12"
           style={{ maxWidth: '560px' }}
         >
-          <p
-            className="uppercase mb-3"
-            style={{ fontSize: '11px', letterSpacing: '2.5px', color: '#aaaaaa' }}
-          >
-            Sound familiar?
-          </p>
           <h2
             className="mb-3"
             style={{
-              fontSize: 'clamp(28px, 3vw, 38px)',
-              fontWeight: 500,
-              letterSpacing: '-1.2px',
+              fontSize: 'var(--type-section-heading)',
+              fontWeight: 600,
+              letterSpacing: '-0.03em',
               lineHeight: 1.2,
-              color: '#1a1a1a',
+              color: 'var(--color-dark)',
             }}
           >
             Three problems we fix every week.
           </h2>
-          <p style={{ fontSize: '16px', color: '#666', lineHeight: 1.8 }}>
+          <p style={{ fontSize: '16px', color: 'var(--color-muted)', lineHeight: 1.8 }}>
             These are the situations we hear most from businesses that reach out to us.
           </p>
         </motion.div>
@@ -205,8 +212,8 @@ export default function Problems() {
             <ProblemCard
               icon={IconDeviceLaptop}
               headline="Your website is embarrassing you"
-              body="It was built years ago, looks rough on mobile, and you cringe a little every time you hand out your business card. A bad website doesn't just look unprofessional — it's actively costing you customers."
-              bodyExtra="Whether you need a full redesign or just want something that actually works on mobile — we scope it to what makes sense for your budget and get it done."
+              body="It was built years ago, looks rough on mobile, and you cringe a little every time you hand out your business card. A bad website doesn't just look unprofessional: it's actively costing you customers."
+              bodyExtra="Whether you need a full redesign or just want something that actually works on mobile, we scope it to what makes sense for your budget and get it done."
               featured
               cta="We can fix this →"
               delay={0.1}

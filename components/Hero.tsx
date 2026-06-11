@@ -1,31 +1,9 @@
-/**
- * @file components/Hero.tsx
- * @description Above-the-fold hero section. Presents the primary value
- *              proposition, two CTAs (Calendly booking + scroll-to-services),
- *              and a fact card that reinforces trust signals on desktop.
- *
- * @section Hero (first section below nav)
- * @dependencies framer-motion, lib/animations (fadeIn, ease)
- *
- * @notes factRows is defined at module scope (outside the component) because it
- *        is a static data array — hoisting it avoids re-creation on every render.
- *        scrollToServices is memoised with useCallback for the same reason.
- *
- *        The headline uses a per-line mask reveal: each line sits inside an
- *        overflow:hidden wrapper and slides up from y:40. The location pill
- *        animates the dot (scale spring) before the text (opacity fade) to give
- *        the entrance a feeling of sequence.
- *
- *        useReducedMotion: when the OS accessibility setting is on, all spatial
- *        animations are replaced with simple opacity fades.
- */
-
 'use client';
 
 import { useCallback } from 'react';
 import { motion, useReducedMotion } from 'framer-motion';
 import { CALENDLY_URL, LOCATION } from '@/lib/constants';
-import { ease } from '@/lib/animations';
+import { ease, tapPress, smoothScrollTo } from '@/lib/animations';
 
 // ─── Static Data ───────────────────────────────────────────────────────────────
 
@@ -42,14 +20,13 @@ export default function Hero() {
   const prefersReducedMotion = useReducedMotion();
 
   const scrollToServices = useCallback(() => {
-    const el = document.querySelector('#services');
-    if (el) el.scrollIntoView({ behavior: 'smooth' });
+    smoothScrollTo('#services');
   }, []);
 
   return (
     <section
       className="relative pt-[100px] pb-12 md:pt-[120px] md:pb-[72px]"
-      style={{ backgroundColor: '#F7F6F2' }}
+      style={{ backgroundColor: 'var(--color-dark)' }}
     >
       <div className="mx-auto max-w-[1200px] px-5 md:px-12">
         <div className="grid grid-cols-1 lg:grid-cols-[1.15fr_0.85fr] gap-8 items-center">
@@ -63,14 +40,14 @@ export default function Hero() {
               animate={{ opacity: 1 }}
               transition={{ duration: 0.4, delay: 0 }}
               className="flex items-center gap-2"
-              style={{ fontSize: '12px', color: '#888' }}
+              style={{ fontSize: '12px', color: 'rgba(247,246,242,0.55)' }}
             >
               <motion.span
                 initial={{ scale: prefersReducedMotion ? 1 : 0 }}
                 animate={{ scale: 1 }}
                 transition={{ type: 'spring', stiffness: 300, damping: 20, delay: 0 }}
                 className="w-2 h-2 rounded-full flex-shrink-0"
-                style={{ backgroundColor: '#EF9F27', display: 'inline-block' }}
+                style={{ backgroundColor: 'var(--color-accent-mid)', display: 'inline-block' }}
                 aria-hidden="true"
               />
               <motion.span
@@ -85,11 +62,11 @@ export default function Hero() {
             {/* Headline — each line mask-reveals from below (overflow:hidden clips the travel) */}
             <h1
               style={{
-                fontSize: 'clamp(34px, 4.5vw, 50px)',
-                fontWeight: 500,
-                letterSpacing: '-2.5px',
-                lineHeight: 1.07,
-                color: '#1a1a1a',
+                fontSize: 'clamp(36px, 5vw, 58px)',
+                fontWeight: 600,
+                letterSpacing: '-0.04em',
+                lineHeight: 1.05,
+                color: 'var(--color-bg)',
               }}
             >
               <div style={{ overflow: 'hidden' }}>
@@ -102,26 +79,30 @@ export default function Hero() {
                   We build software that makes your
                 </motion.span>
               </div>
-              <div style={{ overflow: 'hidden' }}>
+              <div style={{ overflow: 'hidden', paddingBottom: '4px' }}>
                 <motion.span
                   style={{ display: 'block' }}
                   initial={{ y: prefersReducedMotion ? 0 : 40, opacity: 0 }}
                   animate={{ y: 0, opacity: 1 }}
                   transition={{ duration: 0.6, ease, delay: 0.18 }}
                 >
-                  {/* One-time brightness pulse fires after the line lands */}
-                  <motion.em
-                    className="not-italic"
+                  {/* Terracotta stamp — bg pulse fires after the line lands */}
+                  <motion.span
                     animate={
                       prefersReducedMotion
-                        ? { color: '#C85A1E' }
-                        : { color: ['#C85A1E', '#e8813a', '#C85A1E'] }
+                        ? { backgroundColor: '#C85A1E' }
+                        : { backgroundColor: ['#C85A1E', '#e8813a', '#C85A1E'] }
                     }
                     transition={{ delay: 0.9, duration: 0.6, ease: 'easeInOut', times: [0, 0.5, 1] }}
-                    style={{ color: '#C85A1E' }}
+                    style={{
+                      backgroundColor: 'var(--color-accent)',
+                      color: 'var(--color-bg)',
+                      padding: '0 8px 3px',
+                      borderRadius: '4px',
+                    }}
                   >
                     business run better.
-                  </motion.em>
+                  </motion.span>
                 </motion.span>
               </div>
             </h1>
@@ -131,7 +112,7 @@ export default function Hero() {
               initial={{ opacity: 0, y: prefersReducedMotion ? 0 : 16 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.6, ease, delay: 0.5 }}
-              style={{ fontSize: '16px', color: '#666666', lineHeight: 1.8, maxWidth: '480px' }}
+              style={{ fontSize: '16px', color: 'rgba(247,246,242,0.65)', lineHeight: 1.8, maxWidth: '480px' }}
             >
               Websites, apps, automations, and AI tools for small businesses and startups in the
               GTA. No fluff, no bloated agencies. Just good work at a fair price.
@@ -148,18 +129,18 @@ export default function Hero() {
                 href={CALENDLY_URL}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="inline-flex items-center font-medium transition-colors duration-200"
+                className="inline-flex items-center font-semibold transition-colors duration-200"
                 style={{
-                  backgroundColor: '#1a1a1a',
-                  color: '#F7F6F2',
+                  backgroundColor: 'var(--color-accent)',
+                  color: '#fff',
                   padding: '13px 26px',
-                  borderRadius: '8px',
+                  borderRadius: 'var(--radius-btn)',
                   fontSize: '14px',
                   minHeight: '44px',
                 }}
-                whileTap={{ scale: 0.97, transition: { duration: 0.1 } }}
-                onMouseEnter={(e) => (e.currentTarget.style.backgroundColor = '#C85A1E')}
-                onMouseLeave={(e) => (e.currentTarget.style.backgroundColor = '#1a1a1a')}
+                whileTap={tapPress}
+                onMouseEnter={(e) => (e.currentTarget.style.backgroundColor = 'var(--color-accent-text)')}
+                onMouseLeave={(e) => (e.currentTarget.style.backgroundColor = 'var(--color-accent)')}
               >
                 Book a free call
               </motion.a>
@@ -168,19 +149,48 @@ export default function Hero() {
                 onClick={scrollToServices}
                 className="inline-flex items-center font-medium transition-all duration-200 cursor-pointer bg-transparent"
                 style={{
-                  color: '#1a1a1a',
+                  color: 'rgba(247,246,242,0.80)',
                   padding: '13px 26px',
-                  borderRadius: '8px',
+                  borderRadius: 'var(--radius-btn)',
                   fontSize: '14px',
-                  border: '0.5px solid #ccc',
+                  border: '0.5px solid rgba(247,246,242,0.25)',
                   minHeight: '44px',
                 }}
-                whileTap={{ scale: 0.97, transition: { duration: 0.1 } }}
-                onMouseEnter={(e) => (e.currentTarget.style.borderColor = '#1a1a1a')}
-                onMouseLeave={(e) => (e.currentTarget.style.borderColor = '#ccc')}
+                whileTap={tapPress}
+                onMouseEnter={(e) => (e.currentTarget.style.borderColor = 'rgba(247,246,242,0.70)')}
+                onMouseLeave={(e) => (e.currentTarget.style.borderColor = 'rgba(247,246,242,0.25)')}
               >
                 See our services
               </motion.button>
+            </motion.div>
+
+            {/* Trust signals — mobile only; desktop gets the full fact card in the right column */}
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              transition={{ duration: 0.5, delay: 0.9 }}
+              className="lg:hidden grid grid-cols-2 gap-x-4 gap-y-3"
+              aria-label="At a glance"
+            >
+              {factRows.map((row) => (
+                <div key={row.label} className="flex flex-col gap-1">
+                  <span
+                    className="inline-flex items-center font-medium self-start"
+                    style={{
+                      backgroundColor: 'var(--color-accent-light)',
+                      color: 'var(--color-accent-text)',
+                      fontSize: '11px',
+                      padding: '3px 8px',
+                      borderRadius: '20px',
+                    }}
+                  >
+                    {row.tag}
+                  </span>
+                  <span style={{ fontSize: '11px', color: 'rgba(247,246,242,0.55)' }}>
+                    {row.label}
+                  </span>
+                </div>
+              ))}
             </motion.div>
           </div>
 
@@ -191,9 +201,9 @@ export default function Hero() {
             transition={{ duration: 0.6, ease, delay: 0.3 }}
             className="hidden lg:block"
             style={{
-              backgroundColor: '#FFFFFF',
-              borderRadius: '16px',
-              border: '0.5px solid #dedad2',
+              backgroundColor: 'var(--color-dark-card)',
+              borderRadius: 'var(--radius-hero-card)',
+              border: '0.5px solid var(--color-border-dark)',
               overflow: 'hidden',
             }}
             aria-label="At a glance"
@@ -206,17 +216,17 @@ export default function Hero() {
                 transition={{ duration: 0.4, delay: 0.35 + i * 0.06 }}
                 className="flex items-center justify-between px-6 py-4 transition-colors duration-150"
                 style={{
-                  borderBottom: i < factRows.length - 1 ? '0.5px solid #dedad2' : 'none',
+                  borderBottom: i < factRows.length - 1 ? '0.5px solid var(--color-border-dark)' : 'none',
                 }}
-                onMouseEnter={(e) => (e.currentTarget.style.backgroundColor = '#fafaf8')}
+                onMouseEnter={(e) => (e.currentTarget.style.backgroundColor = 'var(--color-dark-card-hover)')}
                 onMouseLeave={(e) => (e.currentTarget.style.backgroundColor = 'transparent')}
               >
-                <span style={{ fontSize: '13px', color: '#666' }}>{row.label}</span>
+                <span style={{ fontSize: '13px', color: 'rgba(247,246,242,0.50)' }}>{row.label}</span>
                 <span
                   className="inline-flex items-center font-medium"
                   style={{
-                    backgroundColor: '#FDF0E8',
-                    color: '#C85A1E',
+                    backgroundColor: 'var(--color-accent-light)',
+                    color: 'var(--color-accent-text)',
                     fontSize: '11px',
                     padding: '3px 10px',
                     borderRadius: '20px',

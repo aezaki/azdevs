@@ -12,6 +12,10 @@
 
 import type { NextConfig } from 'next';
 
+// Dev-only allowance so impeccable live mode can load.
+const __impeccableLiveDev =
+  process.env.NODE_ENV === 'development' ? ' http://localhost:8400' : '';
+
 // ─── Security Headers ───────────────────────────────────────────────────────────
 
 const securityHeaders = [
@@ -32,11 +36,11 @@ const securityHeaders = [
     value: [
       "default-src 'self'",
       // 'unsafe-eval' + 'unsafe-inline' required by Next.js / Turbopack
-      "script-src 'self' 'unsafe-eval' 'unsafe-inline' https://assets.calendly.com https://vercel.live",
+      `script-src 'self' 'unsafe-eval' 'unsafe-inline' https://assets.calendly.com https://vercel.live${__impeccableLiveDev}`,
       "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com",
       "font-src 'self' https://fonts.gstatic.com",
       "img-src 'self' data: blob: https:",
-      "connect-src 'self' https://api.resend.com https://calendly.com https://vercel.live",
+      `connect-src 'self' https://api.resend.com https://calendly.com https://vercel.live${__impeccableLiveDev}`,
       // Calendly is embedded in an iframe via the booking link redirect
       "frame-src https://calendly.com",
       "frame-ancestors 'none'",

@@ -16,12 +16,28 @@
  *        the standard and reduced variant based on that hook's return value.
  */
 
-import type { Transition, MotionProps } from 'framer-motion';
+import type { Transition, MotionProps, TargetAndTransition } from 'framer-motion';
 
 // ─── Shared Easing ──────────────────────────────────────────────────────────────
 
 /** Custom cubic bezier — starts fast, settles with physical weight */
 export const ease: Transition['ease'] = [0.21, 0.47, 0.32, 0.98];
+
+// ─── Shared Interaction Presets ────────────────────────────────────────────────
+
+/** Spring config for y:-2 hover lifts (Footer links, social pills, etc.) */
+export const springTransition: Transition = {
+  duration: 0.15,
+  type: 'spring' as const,
+  stiffness: 300,
+  damping: 25,
+};
+
+/** whileTap press-down used on all primary and secondary buttons */
+export const tapPress: TargetAndTransition = {
+  scale: 0.97,
+  transition: { duration: 0.1 },
+};
 
 // ─── Animation Presets ─────────────────────────────────────────────────────────
 
@@ -36,7 +52,7 @@ export const scrollReveal = (
 ): Pick<MotionProps, 'initial' | 'whileInView' | 'viewport' | 'transition'> => ({
   initial: { opacity: 0, y: 24 },
   whileInView: { opacity: 1, y: 0 },
-  viewport: { once: true, amount: 0.1 },
+  viewport: { once: true, amount: 0.2 },
   transition: { duration: 0.6, ease, delay },
 });
 
@@ -49,8 +65,22 @@ export const scrollRevealReduced = (
 ): Pick<MotionProps, 'initial' | 'whileInView' | 'viewport' | 'transition'> => ({
   initial: { opacity: 0 },
   whileInView: { opacity: 1 },
-  viewport: { once: true, amount: 0.1 },
+  viewport: { once: true, amount: 0.2 },
   transition: { duration: 0.4, delay },
+});
+
+/**
+ * Opacity-only scroll reveal — no spatial movement. Use for sections where
+ * content should materialize rather than rise: full-bleed color sections,
+ * emotional peaks, or any surface where Y travel would break the composition.
+ */
+export const scrollRevealFade = (
+  delay = 0
+): Pick<MotionProps, 'initial' | 'whileInView' | 'viewport' | 'transition'> => ({
+  initial: { opacity: 0 },
+  whileInView: { opacity: 1 },
+  viewport: { once: true, amount: 0.2 },
+  transition: { duration: 0.75, ease: 'easeOut', delay },
 });
 
 /**
@@ -79,3 +109,11 @@ export const fadeInReduced = (
   animate: { opacity: 1 },
   transition: { duration: 0.4, delay },
 });
+
+/** scrollIntoView respecting prefers-reduced-motion */
+export function smoothScrollTo(selector: string): void {
+  const el = document.querySelector(selector);
+  if (!el) return;
+  const reducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  el.scrollIntoView({ behavior: reducedMotion ? 'auto' : 'smooth' });
+}
